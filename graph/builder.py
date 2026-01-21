@@ -10,15 +10,14 @@ from tools import DEPARTMENT_TOOLS
 from agents import create_supervisor_node, create_worker_node
 
 def build_graph():
-    # 1. LLM Ayarları
-    # Supervisor için daha zeki model
+    
     llm_supervisor = ChatOpenAI(
-        model="gpt-5-mini",
+        model="gpt-5-mini", 
         temperature=0,
         api_key="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", # (Dosyadaki key'i buraya koyarsın)
         max_retries=3,
         max_tokens=4000,
-        reasoning={"effort": "minimal"},
+        reasoning={"effort": "medium"},
 
     )
     
@@ -28,11 +27,9 @@ def build_graph():
         temperature=0.3
     )
 
-    # --- DEĞİŞİKLİK 1: Math_Agent Eklendi ---
     members = ["HR_Agent", "IT_Agent", "Finance_Agent", "Math_Agent"]
     supervisor_node = create_supervisor_node(llm_supervisor, members)
 
-    # --- PROMPTLAR (Mevcut Olanlar) ---
     hr_prompt = (
         "Sen uzman bir İnsan Kaynakları (HR) Asistanısın.\n"
         "Görevin: İzin, maaş ve personel onay süreçlerini yönetmek.\n\n"
@@ -67,7 +64,6 @@ def build_graph():
         "4. Onay gelmeden işlemi sisteme girme."
     )
 
-    # --- DEĞİŞİKLİK 2: Math Prompt Eklendi ---
     math_prompt = (
         "Sen şirketin Matematik ve Bilim Uzmanısın.\n"
         "Görevin: Wolfram Alpha kullanarak matematiksel/bilimsel hesaplamalar yapmak.\n\n"
@@ -88,22 +84,22 @@ def build_graph():
         "Asla 'manuel çözeyim' deme, Wolfram'ı kullan."
     )
 
-    # 4. Worker Nodes (İşçiler)
     hr_node = create_worker_node(llm_worker, DEPARTMENT_TOOLS["HR"], "HR_Agent", hr_prompt)
     it_node = create_worker_node(llm_worker, DEPARTMENT_TOOLS["IT"], "IT_Agent", it_prompt)
     finance_node = create_worker_node(llm_worker, DEPARTMENT_TOOLS["Finance"], "Finance_Agent", finance_prompt)
     
-    # --- DEĞİŞİKLİK 3: Math Node Eklendi ---
     math_node = create_worker_node(llm_worker, DEPARTMENT_TOOLS["Math"], "Math_Agent", math_prompt)
 
-    # 5. Genel Sohbet Node
+   
     def chat_node(state: AgentState):
         system_msg = (
             "Sen IFS Kurumsal Asistanısın. Şu an genel sohbet modundasın.\n"
             "Kullanıcıya ismiyle hitap et. Samimi, içten ve yardımsever ol.\n"
             "Kısa kesmene gerek yok, sohbeti sürdürebilirsin.\n"
-            "Şirket içi konularda (İK, IT, Finans, Analiz) yönlendirme yapabileceğini hatırlat."
+            "Şirket içi konularda (İK, IT, Finans) yönlendirme yapabileceğini hatırlat."
+            # Tarih bilgisi zaten messages[0] içindeki SystemMessage'dan gelecek.
         )
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_msg),
             MessagesPlaceholder(variable_name="messages"),
@@ -112,7 +108,6 @@ def build_graph():
         response = chain.invoke(state)
         return {"messages": [AIMessage(content=response.content)]}
     
-    # --- GRAPH YAPISI ---
     graph = StateGraph(AgentState)
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("chat", chat_node)
@@ -120,28 +115,24 @@ def build_graph():
     graph.add_node("it", it_node)
     graph.add_node("finance", finance_node)
     
-    # --- DEĞİŞİKLİK 4: Math Node Graph'a Eklendi ---
     graph.add_node("math", math_node)
 
-    # --- KENARLAR (Edges) ---
     graph.add_edge(START, "supervisor")
     graph.add_edge("chat", END)
     graph.add_edge("hr", END)
     graph.add_edge("it", END)
     graph.add_edge("finance", END)
-    graph.add_edge("math", END) # Math işi bitince konuşma biter
+    graph.add_edge("math", END)
 
-    # --- YÖNLENDİRME (Routing) ---
     def route(state: AgentState):
         next_step = state.get("next", "FINISH")
         if next_step == "FINISH": return "chat"
         elif next_step == "HR_Agent": return "hr"
         elif next_step == "IT_Agent": return "it"
         elif next_step == "Finance_Agent": return "finance"
-        elif next_step == "Math_Agent": return "math" # YENİ YÖNLENDİRME
+        elif next_step == "Math_Agent": return "math" 
         else: return "chat"
 
-    # --- DEĞİŞİKLİK 5: Conditional Edges Güncellendi ---
     graph.add_conditional_edges(
         "supervisor", 
         route, 
