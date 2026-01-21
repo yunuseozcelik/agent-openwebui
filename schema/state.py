@@ -8,5 +8,5 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
     
     # next: Supervisor'ın bir sonraki adımda kimi çağırdığı bilgisini tutar.
-    # Sadece tanımlı ajan isimleri veya 'FINISH' olabilir.
-    next: Union[str, Literal["HR_Agent", "IT_Agent", "Finance_Agent", "FINISH"]]
+    # ⚠️ BURADA Math_Agent EKLENDİ
+    next: Union[str, Literal["HR_Agent", "IT_Agent", "Finance_Agent", "Math_Agent", "FINISH"]]

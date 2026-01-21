@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from schema.state import AgentState
 
 class RouteResponse(BaseModel):
-    next: Literal["HR_Agent", "IT_Agent", "Finance_Agent", "FINISH"]
+    next: Literal["HR_Agent", "IT_Agent", "Finance_Agent","Math_Agent", "FINISH"]
 
 def create_supervisor_node(llm: ChatOpenAI, members: List[str]):
     """
@@ -30,6 +30,13 @@ def create_supervisor_node(llm: ChatOpenAI, members: List[str]):
         "- Avans talebi\n"
         "- Harcama raporu\n"
         "- Ödeme durumu\n\n"
+
+        "🧮 Math_Agent: (YENİ UZMAN)\n"
+        "- Matematik problemleri (denklem, türev, integral)\n"
+        "- Bilimsel veriler (uzay, kimya, fizik)\n"
+        "- Para birimi çevirme (Dolar kaç TL)\n"
+        "- Tarih hesaplamaları\n"
+        "- Nüfus, ekonomi gibi genel istatistikler\n\n"
         
         "🔚 FINISH (genel sohbet):\n"
         "- Tüm selamlaşmalar (merhaba, selam, nasılsın, naber)\n"
@@ -37,8 +44,9 @@ def create_supervisor_node(llm: ChatOpenAI, members: List[str]):
         "- Sohbet (tarih ne, hava nasıl, vb.)\n"
         "- Belirsiz talepler\n\n"
         
-        "KURAL: Eğer AÇIK VE NET bir iş talebi yoksa → FINISH\n\n"
-        
+        "KURAL: Açık bir iş/hesaplama talebi yoksa → FINISH"
+        "KURAL: Eğer soru matematiksel, bilimsel veya güncel veri içeriyorsa MUTLAKA Math_Agent seç."
+
         "ÖRNEKLER:\n"
         "FINISH: 'merhaba', 'nasılsın', 'tarihi söyle', 'ismim ne', 'yardım eder misin'\n"
         "HR_Agent: 'izin almak istiyorum', 'bordromu göster'\n"
@@ -49,8 +57,7 @@ def create_supervisor_node(llm: ChatOpenAI, members: List[str]):
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         MessagesPlaceholder(variable_name="messages"),
-        ("system", "Son mesajı analiz et. Bu NET bir iş talebi mi? Kararını ver:"),
-    ])
+        ("system", "Sırada kim var? Karar ver:"),    ])
 
     supervisor_chain = prompt | llm.with_structured_output(RouteResponse)
 
