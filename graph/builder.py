@@ -92,22 +92,40 @@ def build_graph():
 
    
     def chat_node(state: AgentState):
+        """
+        Genel sohbet ve selamlama işlemlerini yöneten düğüm.
+        Herhangi bir tool çağırmaz, sadece kullanıcıyla etkileşime girer.
+        """
         system_msg = (
-            "Sen IFS Kurumsal Asistanısın. Şu an genel sohbet modundasın.\n"
-            "Kullanıcıya ismiyle hitap et. Samimi, içten ve yardımsever ol.\n"
-            "Kısa kesmene gerek yok, sohbeti sürdürebilirsin.\n"
-            "Şirket içi konularda (İK, IT, Finans) yönlendirme yapabileceğini hatırlat."
-            # Tarih bilgisi zaten messages[0] içindeki SystemMessage'dan gelecek.
+            "Sen IFS Kurumsal Asistanısın. Şu an 'Genel Sohbet' modundasın.\n"
+            "GÖREVİN:\n"
+            "1. Kullanıcıya ismiyle hitap et (Sohbet geçmişinden veya bağlamdan ismini yakala).\n"
+            "2. Samimi, profesyonel, içten ve yardımsever bir dil kullan.\n"
+            "3. Kısa kesmene gerek yok, sohbeti doğal bir şekilde sürdür.\n"
+            "4. Gerekirse; İK, IT, Finans veya Matematiksel hesaplamalar konusunda "
+            "yardımcı olabileceğini hatırlat.\n\n"
+            "DİKKAT:\n"
+            "- ASLA kendi kendine hayali bir işlem yapma.\n"
+            "- Sadece sohbet et ve yönlendir."
         )
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_msg),
             MessagesPlaceholder(variable_name="messages"),
         ])
+        
         chain = prompt | llm_supervisor
-        response = chain.invoke(state)
+        
+        try:
+            response = chain.invoke(state)
+        except Exception as e:
+            content = "Üzgünüm, şu an bağlantımda küçük bir sorun var. Nasıl yardımcı olabilirim?"
+            print(f"Chat Node Hatası: {e}")
+
         return {"messages": [AIMessage(content=response.content)]}
     
+
+
     graph = StateGraph(AgentState)
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("chat", chat_node)
