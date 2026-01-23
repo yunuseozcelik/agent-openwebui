@@ -15,16 +15,13 @@ def create_worker_node(llm, tools, agent_name: str, system_prompt: str):
     
     agent = create_react_agent(llm, tools, prompt=system_prompt)
     
-    # 2. Graph Node Fonksiyonu
     def node_func(state: AgentState):
         try:
-            # Ajanı mevcut durumla çalıştır
             result = agent.invoke(state)
             last_message = result["messages"][-1]
             content = last_message.content
 
         except Exception as e:
-            # Hata olursa sistemi çökertme, kullanıcıya bilgi ver
             error_msg = f"⚠️ İşlem sırasında bir hata oluştu: {str(e)}. Lütfen tekrar dener misin?"
             print(f"HATA ({agent_name}): {e}")
             content = error_msg

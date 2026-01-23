@@ -3,11 +3,9 @@ import os
 import requests
 from langchain_core.tools import tool
 
-# Wolfram Alpha App ID
-WOLFRAM_APP_ID = "2YPY4EG4PU"
-os.environ["WOLFRAM_ALPHA_APPID"] = WOLFRAM_APP_ID
 
-# Başlangıçta test
+WOLFRAM_APP_ID = os.environ["WOLFRAM_ALPHA_APPID"]
+
 print("🔍 Wolfram Tool yükleniyor...")
 
 def query_wolfram_api(query: str) -> str:

@@ -7,7 +7,6 @@ def get_lunch_menu(date: str = "today") -> str:
     Şirket yemekhanesindeki günün menüsünü getirir.
     Kullanıcı 'Bugün yemekte ne var?' veya 'Yarın yemek ne?' diye sorabilir.
     """
-    # Bugünün tarihi
     today = datetime.now().strftime("%Y-%m-%d")
     
     if "today" in date or date == today:

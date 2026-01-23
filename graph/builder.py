@@ -4,17 +4,22 @@ from langgraph.graph import StateGraph, END, START
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from config.settings import settings
 from schema.state import AgentState
 from tools import DEPARTMENT_TOOLS
 from agents import create_supervisor_node, create_worker_node
+import os
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+        print("⚠️ ERROR: OPENAI_API_KEY IS NOT FOUND!")
 
 def build_graph():
     
     llm_supervisor = ChatOpenAI(
         model="gpt-5-mini", 
         temperature=0,
-        api_key="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", # (Dosyadaki key'i buraya koyarsın)
+        api_key=api_key,
         max_retries=3,
         max_tokens=4000,
         reasoning={"effort": "medium"},
@@ -23,7 +28,7 @@ def build_graph():
     
     llm_worker = ChatOpenAI(
         model="gpt-4o-mini", 
-        api_key="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",
+        api_key=api_key,
         temperature=0.3
     )
 
@@ -123,7 +128,6 @@ def build_graph():
             print(f"Chat Node Hatası: {e}")
 
         return {"messages": [AIMessage(content=response.content)]}
-    
 
 
     graph = StateGraph(AgentState)
