@@ -4,10 +4,7 @@ import requests
 from langchain_core.tools import tool
 
 
-WOLFRAM_APP_ID = os.environ["WOLFRAM_ALPHA_APPID"]
-
-print("🔍 Wolfram Tool yükleniyor...")
-
+WOLFRAM_APP_ID = "2YPY4EG4PU"   #os.environ["WOLFRAM_ALPHA_APPID"]
 def query_wolfram_api(query: str) -> str:
     """
     Wolfram Alpha Simple API'ye direkt istek atar.

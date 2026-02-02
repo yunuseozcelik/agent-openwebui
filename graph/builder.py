@@ -9,7 +9,7 @@ from tools import DEPARTMENT_TOOLS
 from agents import create_supervisor_node, create_worker_node
 import os
 
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = "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"      #os.getenv("OPENAI_API_KEY")
 
 if not api_key:
         print("⚠️ ERROR: OPENAI_API_KEY IS NOT FOUND!")
@@ -17,7 +17,7 @@ if not api_key:
 def build_graph():
     
     llm_supervisor = ChatOpenAI(
-        model="gpt-5-mini", 
+        model="gpt-5.2", 
         temperature=0,
         api_key=api_key,
         max_retries=3,
@@ -29,7 +29,7 @@ def build_graph():
     llm_worker = ChatOpenAI(
         model="gpt-4o-mini", 
         api_key=api_key,
-        temperature=0.3
+        temperature=0.3,
     )
 
     members = ["HR_Agent", "IT_Agent", "Finance_Agent", "Math_Agent"]
