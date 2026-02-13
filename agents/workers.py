@@ -22,8 +22,8 @@ def create_worker_node(llm, tools, agent_name: str, system_prompt: str):
             content = last_message.content
 
         except Exception as e:
-            error_msg = f"⚠️ İşlem sırasında bir hata oluştu: {str(e)}. Lütfen tekrar dener misin?"
-            print(f"HATA ({agent_name}): {e}")
+            error_msg = f"Islem sirasinda bir hata olustu: {str(e)}. Lutfen tekrar dener misin?"
+            print(f"[HATA] ({agent_name}): {e}")
             content = error_msg
         
         return {

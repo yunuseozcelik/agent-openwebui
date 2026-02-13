@@ -6,17 +6,19 @@ import time
 import uuid
 
 # Kendi graph yapını import et
+from config import OPENAI_API_KEY  # dotenv yüklenmesini tetikler
 from graph.builder import build_graph
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from utils.context import extract_ow_context
 
 app = FastAPI(title="IFS Corporate AI Server")
 
 # Graph'ı bir kere yükle
 try:
     graph = build_graph()
-    print("🤖 Supervisor Ajanı Hazır ve Bekliyor...")
+    print("[OK] Supervisor Ajani Hazir ve Bekliyor...")
 except Exception as e:
-    print(f"⚠️ Graph yüklenirken hata: {e}")
+    print(f"[HATA] Graph yuklenirken hata: {e}")
     graph = None
 
 
@@ -121,9 +123,10 @@ async def chat_completions(request: ChatCompletionRequest):
             elif m.role == "system":
                 langchain_messages.append(SystemMessage(content=content_text))
 
-        # 2) Graph'ı çalıştır
-        inputs = {"messages": langchain_messages}
-        config = {"configurable": {"thread_id": "api_user"}}
+        # 2) Kullanıcı context'ini çıkar ve graph'a aktar
+        user_ctx = extract_ow_context(langchain_messages)
+        inputs = {"messages": langchain_messages, "user_context": user_ctx}
+        config = {"configurable": {"thread_id": user_ctx.get("user_email") or "api_user"}}
 
         result = graph.invoke(inputs, config=config)
 

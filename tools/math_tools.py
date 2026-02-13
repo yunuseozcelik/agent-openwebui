@@ -1,10 +1,9 @@
 # tools/math_tools.py - WORKING VERSION
-import os
 import requests
 from langchain_core.tools import tool
+from config import WOLFRAM_ALPHA_APPID
 
-
-WOLFRAM_APP_ID = "2YPY4EG4PU"   #os.environ["WOLFRAM_ALPHA_APPID"]
+WOLFRAM_APP_ID = WOLFRAM_ALPHA_APPID
 def query_wolfram_api(query: str) -> str:
     """
     Wolfram Alpha Simple API'ye direkt istek atar.
@@ -54,24 +53,24 @@ def calculate_wolfram(query: str) -> str:
         Wolfram Alpha'nın cevabı
     """
     print(f"\n{'='*60}")
-    print(f"🔍 WOLFRAM TOOL ÇAĞRILDI")
-    print(f"📝 Sorgu: {query}")
+    print(f"[WOLFRAM] TOOL CAGRILDI")
+    print(f"[WOLFRAM] Sorgu: {query}")
     print(f"{'='*60}")
-    
+
     result = query_wolfram_api(query)
-    
-    print(f"✅ Cevap: {result[:150]}")
+
+    print(f"[WOLFRAM] Cevap: {result[:150]}")
     print(f"{'='*60}\n")
     
     return result
 
 
-# Test - başlangıçta çalışır
+# Test - baslangiçta calisir
 try:
     test_result = query_wolfram_api("2+2")
     if test_result == "4":
-        print("✅ Wolfram Alpha bağlantısı başarılı")
+        print("[WOLFRAM] Baglanti basarili")
     else:
-        print(f"⚠️ Wolfram bağlantısı var ama beklenmeyen cevap: {test_result}")
+        print(f"[WOLFRAM] Baglanti var ama beklenmeyen cevap: {test_result}")
 except Exception as e:
-    print(f"❌ Wolfram başlatma hatası: {e}")
+    print(f"[WOLFRAM] Baslatma hatasi: {e}")

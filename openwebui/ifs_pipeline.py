@@ -22,13 +22,13 @@ class Pipeline:
         self.valves = self.Valves()
 
     async def on_startup(self):
-        print(f"Pipeline Başlatılıyor: {self.name}")
+        print(f"Pipeline Baslatiliyor: {self.name}")
         try:
             from graph.builder import build_graph
             self.graph = build_graph()
-            print("🧠 Supervisor Graph Başarıyla Derlendi!")
+            print("[OK] Supervisor Graph Basariyla Derlendi!")
         except ImportError as e:
-            print(f"❌ Hata: {e}")
+            print(f"[HATA] {e}")
 
     async def on_shutdown(self):
         print(f"Pipeline Durduruldu: {self.name}")
@@ -61,7 +61,12 @@ class Pipeline:
             "messages": [
                 SystemMessage(content=context_prompt), # Gizli sistem bilgisi
                 ("user", user_message)
-            ]
+            ],
+            "user_context": {
+                "user_name": user_name,
+                "user_email": user_email,
+                "current_date": now.strftime("%Y-%m-%d"),
+            }
         }
         
         thread_id = user_email if user_email != "bilinmiyor" else "default_user"
