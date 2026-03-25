@@ -9,8 +9,7 @@ from tools import DEPARTMENT_TOOLS
 from agents import create_supervisor_node, create_worker_node
 from config import OPENAI_API_KEY
 
-api_key = OPENAI_API_KEY
-
+api_key = "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"
 if not api_key:
         print("[HATA] OPENAI_API_KEY BULUNAMADI!")
 

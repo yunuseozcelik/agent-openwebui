@@ -16,28 +16,35 @@ def _get_token() -> str:
 
     # Cache'de geçerli token varsa onu döndür
     if _token_cache["token"] and now < _token_cache["expires_at"]:
+        print("[IFS AUTH] Cache'den token kullaniliyor")
         return _token_cache["token"]
 
     if not IFS_CLIENT_ID or not IFS_CLIENT_SECRET:
+        print("[IFS AUTH] HATA: IFS_CLIENT_ID veya IFS_CLIENT_SECRET bos!")
         raise ValueError("IFS_CLIENT_ID ve IFS_CLIENT_SECRET .env dosyasında tanımlanmalıdır.")
 
     payload = {
         "clientId": IFS_CLIENT_ID,
-        "clientSecret": IFS_CLIENT_SECRET,
+        "Secret": IFS_CLIENT_SECRET,
     }
     response = requests.post(IFS_AUTH_URL, json=payload, timeout=IFS_API_TIMEOUT)
     if not response.ok:
+        print(f"[IFS AUTH] HATA: HTTP {response.status_code} - {response.text}")
         raise ValueError(f"IFS Auth hatasi: HTTP {response.status_code} - {response.text}")
 
     data = response.json()
-    token = data.get("token") or data.get("accessToken") or data.get("access_token")
+    # API yanıtı: {"isSuccess": true, "data": {"token": "..."}} formatında
+    inner = data.get("data") or {}
+    token = inner.get("token") or data.get("token") or data.get("accessToken") or data.get("access_token")
     if not token:
+        print(f"[IFS AUTH] HATA: Token response'da bulunamadi. Response: {data}")
         raise ValueError(f"Token response'da bulunamadi. Response: {data}")
 
     # Token'ı 55 dakika cache'le (genelde 60 dk geçerlidir)
     _token_cache["token"] = token
     _token_cache["expires_at"] = now + 55 * 60
 
+    print(f"[IFS AUTH] Token basariyla alindi (ilk 20 karakter: {token[:20]}...)")
     return token
 
 
