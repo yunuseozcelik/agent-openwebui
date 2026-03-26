@@ -1,6 +1,7 @@
 azure-ai-projects>=2.0.0
 azure-identity
-agent-framework --pre
+openai
+chainlit
 fastapi
 uvicorn
 pydantic
