@@ -6,6 +6,9 @@ load_dotenv()
 # OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+OPENAI_PLANNER_MODEL = os.getenv("OPENAI_PLANNER_MODEL", "gpt-5.2")
+OPENAI_WORKER_MODEL = os.getenv("OPENAI_WORKER_MODEL", "gpt-4o-mini")
+WOLFRAM_ALPHA_APPID = os.getenv("WOLFRAM_ALPHA_APPID", "")
 
 # IFS ERP API
 IFS_API_BASE_URL = os.getenv("IFS_API_BASE_URL", "https://commonapi.fnss.com.tr")

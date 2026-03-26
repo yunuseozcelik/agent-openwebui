@@ -7,11 +7,17 @@ import sys
 import os
 import json
 import random
+import requests
 from datetime import datetime
 from typing import Annotated
 
 from agent_framework import tool
 from pydantic import Field
+
+try:
+    from .config import WOLFRAM_ALPHA_APPID
+except ImportError:
+    from config import WOLFRAM_ALPHA_APPID
 
 # Root projedeki tools/ paketinden ifs_client'i import et
 # (Bu dosyanin adi da "tools" oldugu icin importlib ile yukleriz)
@@ -30,6 +36,8 @@ get_user_detail = _ifs_client.get_user_detail
 get_empno_from_email = _ifs_client.get_empno_from_email
 get_part_detail = _ifs_client.get_part_detail
 get_meal_list = _ifs_client.get_meal_list
+MOCK_MODE = getattr(_ifs_client, "MOCK_MODE", False)
+MOCK_USER_EMAIL = getattr(_ifs_client, "MOCK_USER_EMAIL", "demo.user@sirket.com")
 
 
 # ============================================================
@@ -43,6 +51,9 @@ def get_employee_info(
     """Kullanicinin detayli personel bilgilerini IFS sisteminden getirir.
     Sicil no, ad soyad, birim, pozisyon, hizmet suresi, izin ozeti ve durum bilgilerini doner."""
     try:
+        if not user_email and MOCK_MODE:
+            user_email = MOCK_USER_EMAIL
+
         users = get_user_by_email(user_email)
         basic = users[0] if users else {}
 
@@ -78,6 +89,9 @@ def check_leave_balance(
     """Kullanicinin gercek izin bakiyesini IFS sisteminden getirir.
     Toplam izin, kullanilan izin, kalan izin, mazeret izni ve ECB saat bilgilerini doner."""
     try:
+        if not user_email and MOCK_MODE:
+            user_email = MOCK_USER_EMAIL
+
         empno = get_empno_from_email(user_email)
         details = get_user_detail(empno)
         if not details:
@@ -238,6 +252,26 @@ def request_advance_payment(
 
 
 @tool(approval_mode="never_require")
+def submit_expense_report(
+    expenses: Annotated[list, Field(description="Harcama kalemleri listesi")],
+    total_amount: Annotated[float, Field(description="Toplam tutar")],
+    category: Annotated[str, Field(description="Kategori")] = "travel",
+) -> str:
+    """Submit an expense report."""
+    report_id = f"EXP-{random.randint(10000, 99999)}"
+    response = {
+        "status": "submitted",
+        "report_id": report_id,
+        "total_amount": total_amount,
+        "items_count": len(expenses),
+        "category": category,
+        "approver": "Bolum Muduru",
+        "message": f"Harcama raporu gonderildi. Numara: {report_id}",
+    }
+    return json.dumps(response, ensure_ascii=False)
+
+
+@tool(approval_mode="never_require")
 def check_expense_status(
     expense_id: Annotated[str, Field(description="Harcama numarasi")] = "last",
 ) -> str:
@@ -254,6 +288,98 @@ def check_expense_status(
         "message": "Harcaniz onaylandi.",
     }
     return json.dumps(response, ensure_ascii=False)
+
+
+@tool(approval_mode="never_require")
+def check_pending_approvals(
+    user_role: Annotated[str, Field(description="employee veya manager")] = "employee",
+) -> str:
+    """List pending approval requests."""
+    if user_role == "manager":
+        approvals = [
+            {"id": "LEAVE-001", "type": "Izin", "requester": "Ali Yilmaz", "days": 5},
+            {"id": "EQ-002", "type": "Ekipman", "requester": "Ayse Demir", "item": "Laptop"},
+            {"id": "ADV-003", "type": "Avans", "requester": "Mehmet Oz", "amount": 5000},
+        ]
+    else:
+        approvals = [
+            {"id": "LEAVE-123", "type": "Izin", "status": "Onay bekliyor", "days": 3},
+            {"id": "EXP-456", "type": "Harcama", "status": "Onaylandi", "amount": 1200},
+        ]
+    return json.dumps({"pending_count": len(approvals), "items": approvals}, ensure_ascii=False)
+
+
+@tool(approval_mode="never_require")
+def approve_request(
+    request_id: Annotated[str, Field(description="Talep numarasi")],
+    comment: Annotated[str, Field(description="Onay notu")] = "",
+) -> str:
+    """Approve a request."""
+    response = {
+        "status": "approved",
+        "request_id": request_id,
+        "approved_by": "current_manager",
+        "approved_at": datetime.now().isoformat(),
+        "comment": comment,
+        "message": f"{request_id} numarali talep onaylandi.",
+    }
+    return json.dumps(response, ensure_ascii=False)
+
+
+@tool(approval_mode="never_require")
+def reject_request(
+    request_id: Annotated[str, Field(description="Talep numarasi")],
+    reason: Annotated[str, Field(description="Red nedeni")],
+) -> str:
+    """Reject a request."""
+    response = {
+        "status": "rejected",
+        "request_id": request_id,
+        "rejected_by": "current_manager",
+        "rejected_at": datetime.now().isoformat(),
+        "reason": reason,
+        "message": f"{request_id} numarali talep reddedildi.",
+    }
+    return json.dumps(response, ensure_ascii=False)
+
+
+# ============================================================
+# MATH TOOLS
+# ============================================================
+
+def query_wolfram_api(query: str) -> str:
+    """Query the Wolfram Alpha simple API."""
+    if not WOLFRAM_ALPHA_APPID:
+        return "Wolfram Alpha anahtari tanimli degil."
+
+    params = {
+        "appid": WOLFRAM_ALPHA_APPID,
+        "i": query,
+        "timeout": 10,
+        "units": "metric",
+    }
+
+    try:
+        response = requests.get("http://api.wolframalpha.com/v1/result", params=params, timeout=15)
+        if response.status_code == 200:
+            return response.text.strip()
+        if response.status_code == 501:
+            return f"Wolfram bu sorguya cevap bulamadi: {query}"
+        if response.status_code == 401:
+            return "Wolfram Alpha API anahtari gecersiz."
+        return f"Wolfram API hatasi: {response.status_code}"
+    except requests.exceptions.Timeout:
+        return "Wolfram Alpha zaman asimina ugradi."
+    except Exception as exc:
+        return f"Wolfram baglanti hatasi: {exc}"
+
+
+@tool(approval_mode="never_require")
+def calculate_wolfram(
+    query: Annotated[str, Field(description="Ingilizce matematiksel veya bilimsel sorgu")],
+) -> str:
+    """Run a Wolfram Alpha query for math or science questions."""
+    return query_wolfram_api(query)
 
 
 # ============================================================
@@ -321,11 +447,38 @@ def lookup_part_detail(
         return json.dumps({"error": str(e)}, ensure_ascii=False)
 
 
+@tool(approval_mode="never_require")
+def get_shuttle_times(
+    route: Annotated[str, Field(description="Guzergah adi")] = "Merkez",
+) -> str:
+    """Return mock shuttle schedule details."""
+    schedule = {
+        "Merkez": ["07:45 Semt Duragi", "18:15 Ofis Onu"],
+        "Batikent": ["07:20 Batikent Metro", "18:10 Ofis Onu"],
+        "Cayyolu": ["07:10 Cayyolu Duragi", "18:05 Ofis Onu"],
+        "Kecioren": ["07:00 Belediye Onu", "18:00 Ofis Onu"],
+    }
+    return json.dumps(
+        {
+            "route": route,
+            "times": schedule.get(route, schedule["Merkez"]),
+        },
+        ensure_ascii=False,
+    )
+
+
 # ============================================================
 # TOOL GRUPLARI (Agent'lara atanmak icin)
 # ============================================================
 
-HR_TOOLS = [get_employee_info, check_leave_balance, request_leave, check_salary_slip]
-IT_TOOLS = [create_support_ticket, check_ticket_status, request_equipment]
-FINANCE_TOOLS = [request_advance_payment, check_expense_status]
-GENERAL_TOOLS = [get_lunch_menu, lookup_part_detail]
+HR_TOOLS = [get_employee_info, check_leave_balance, request_leave, check_salary_slip, check_pending_approvals]
+IT_TOOLS = [create_support_ticket, check_ticket_status, request_equipment, lookup_part_detail]
+FINANCE_TOOLS = [
+    request_advance_payment,
+    submit_expense_report,
+    check_expense_status,
+    approve_request,
+    reject_request,
+]
+MATH_TOOLS = [calculate_wolfram]
+GENERAL_TOOLS = [get_lunch_menu, get_shuttle_times]

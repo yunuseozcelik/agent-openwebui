@@ -1,6 +1,8 @@
 langchain-core
 langchain-openai
 langgraph
+agent-framework[openai] --pre
+chainlit
 fastapi
 uvicorn
 pydantic

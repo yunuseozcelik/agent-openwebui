@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFS Corporate AI Gateway</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0f1623;
+            --panel: #172338;
+            --panel-2: #1d2d46;
+            --border: #2f466d;
+            --accent: #ff6a3d;
+            --accent-soft: rgba(255, 106, 61, 0.12);
+            --text: #eef3ff;
+            --muted: #94a8ca;
+            --success: #29d17f;
+            --warn: #ffcc4d;
+            --danger: #ff6b6b;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(255, 106, 61, 0.12), transparent 32%),
+                radial-gradient(circle at top right, rgba(53, 91, 255, 0.14), transparent 28%),
+                linear-gradient(180deg, #101826, var(--bg));
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .brand h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .brand p {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav a, .nav button {
+            text-decoration: none;
+            color: var(--text);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .nav a:hover, .nav button:hover {
+            border-color: rgba(255, 106, 61, 0.45);
+            background: var(--accent-soft);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 18px;
+        }
+
+        .card {
+            background: rgba(23, 35, 56, 0.82);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        }
+
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .section-title h2 {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .status-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(143, 163, 197, 0.12);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-value {
+            margin-top: 8px;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge.ok { background: rgba(41, 209, 127, 0.15); color: #8cf0b7; }
+        .badge.warn { background: rgba(255, 204, 77, 0.15); color: #ffd876; }
+        .badge.off { background: rgba(148, 168, 202, 0.15); color: #c7d5eb; }
+
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .list-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(148, 168, 202, 0.12);
+        }
+
+        .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .list-main {
+            font-size: 14px;
+        }
+
+        .list-meta {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .mono {
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+            color: var(--muted);
+            word-break: break-all;
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .kv div:nth-child(odd) {
+            color: var(--muted);
+        }
+
+        .help-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .hint-box {
+            border: 1px solid rgba(255, 204, 77, 0.25);
+            background: rgba(255, 204, 77, 0.06);
+            color: #ffe8a3;
+            border-radius: 14px;
+            padding: 14px;
+            margin-top: 14px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .status-row {
+                grid-template-columns: 1fr;
+            }
+
+            .kv {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div class="brand">
+                <h1>Portkey Gateway</h1>
+                <p>Gateway durumu, iki motorun maliyetleri ve son LLM cagrilari tek ekranda.</p>
+            </div>
+            <div class="nav">
+                <a href="/">Chat'e Don</a>
+                <button onclick="loadGatewayPage()">Yenile</button>
+                <button onclick="resetControlPanel()">Maliyetleri Sifirla</button>
+                <a id="dashboard-link" href="https://app.portkey.ai" target="_blank" rel="noreferrer">Portkey Dashboard</a>
+            </div>
+        </div>
+
+        <div class="layout">
+            <div class="card">
+                <div class="section-title">
+                    <h2>Gateway Durumu</h2>
+                    <div id="gateway-badge" class="badge off">Kapali</div>
+                </div>
+
+                <div class="status-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Toplam Tahmini Maliyet</div>
+                        <div class="stat-value" id="total-cost">$0.0000</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Toplam Token</div>
+                        <div class="stat-value" id="total-tokens">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">LLM Cagrisi</div>
+                        <div class="stat-value" id="total-calls">0</div>
+                    </div>
+                </div>
+
+                <div class="kv">
+                    <div>Base URL</div>
+                    <div class="mono" id="gateway-base">-</div>
+                    <div>Dashboard</div>
+                    <div class="mono" id="gateway-dashboard">-</div>
+                    <div>Mode</div>
+                    <div id="gateway-mode">-</div>
+                    <div>Provider</div>
+                    <div id="gateway-provider">-</div>
+                    <div>Model Prefix</div>
+                    <div id="gateway-prefix">-</div>
+                    <div>Virtual Key</div>
+                    <div id="gateway-virtual">-</div>
+                    <div>Config</div>
+                    <div id="gateway-config">-</div>
+                </div>
+
+                <div class="hint-box" id="visibility-hint">
+                    Portkey etkin degil. Dashboard'da gorunurluk icin gateway aktif olmali ve istekler yeniden bu servis uzerinden akmali.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>Kurulum Kontrolu</h2>
+                    <span class="muted">Portkey ile gorunurluk denetimi</span>
+                </div>
+                <div class="help-list" id="setup-checks"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>Motor Dagilimi</h2>
+                    <span class="muted">LangGraph ve MAF ayrimi</span>
+                </div>
+                <div class="list" id="engine-stats"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>Komponent Dagilimi</h2>
+                    <span class="muted">Planner, worker, specialist ve diger cagrilar</span>
+                </div>
+                <div class="list" id="component-stats"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>Model Dagilimi</h2>
+                    <span class="muted">Tahmini maliyet kirilimi</span>
+                </div>
+                <div class="list" id="model-stats"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <h2>Son Gateway Cagrilari</h2>
+                    <span class="muted">Yerelde izlenen son 12 LLM kaydi</span>
+                </div>
+                <div class="list" id="recent-rows"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gatewayBadge = document.getElementById("gateway-badge");
+        const totalCost = document.getElementById("total-cost");
+        const totalTokens = document.getElementById("total-tokens");
+        const totalCalls = document.getElementById("total-calls");
+        const gatewayBase = document.getElementById("gateway-base");
+        const gatewayDashboard = document.getElementById("gateway-dashboard");
+        const gatewayMode = document.getElementById("gateway-mode");
+        const gatewayProvider = document.getElementById("gateway-provider");
+        const gatewayPrefix = document.getElementById("gateway-prefix");
+        const gatewayVirtual = document.getElementById("gateway-virtual");
+        const gatewayConfig = document.getElementById("gateway-config");
+        const visibilityHint = document.getElementById("visibility-hint");
+        const engineStats = document.getElementById("engine-stats");
+        const componentStats = document.getElementById("component-stats");
+        const modelStats = document.getElementById("model-stats");
+        const recentRows = document.getElementById("recent-rows");
+        const setupChecks = document.getElementById("setup-checks");
+        const dashboardLink = document.getElementById("dashboard-link");
+
+        function formatUsd(value) {
+            const amount = Number(value || 0);
+            return `$${amount.toFixed(amount < 0.01 ? 4 : 2)}`;
+        }
+
+        function formatInt(value) {
+            return new Intl.NumberFormat("tr-TR").format(Number(value || 0));
+        }
+
+        function renderRows(container, rows, emptyText) {
+            if (!rows.length) {
+                container.innerHTML = `<div class="list-meta">${emptyText}</div>`;
+                return;
+            }
+            container.innerHTML = rows.join("");
+        }
+
+        function buildSetupChecks(data) {
+            const gateway = data.gateway || {};
+            const checks = [
+                {
+                    ok: gateway.enabled,
+                    text: "PORTKEY_ENABLED aktif ve runtime gateway acik."
+                },
+                {
+                    ok: Boolean(gateway.base_url),
+                    text: "Portkey base URL tanimli."
+                },
+                {
+                    ok: gateway.mode !== "disabled",
+                    text: "Gateway modu provider_auth, virtual_key veya config olarak cozuldu."
+                },
+                {
+                    ok: (data.recent || []).length > 0,
+                    text: "En az bir LLM cagri kaydi olustu. Yeni istek attikca Portkey dashboard'da da gorunmeli."
+                }
+            ];
+
+            if (gateway.virtual_key_configured) {
+                checks.push({ ok: true, text: "Virtual key aktif gorunuyor." });
+            }
+            if (gateway.config_configured) {
+                checks.push({ ok: true, text: "Portkey config aktif gorunuyor." });
+            }
+
+            return checks.map((item) => `
+                <div class="list-row">
+                    <div class="list-main">${item.text}</div>
+                    <div class="badge ${item.ok ? "ok" : "warn"}">${item.ok ? "OK" : "Kontrol"}</div>
+                </div>
+            `);
+        }
+
+        async function resetControlPanel() {
+            const confirmed = window.confirm("Maliyet panelini sifirlamak istiyor musunuz?");
+            if (!confirmed) return;
+            await fetch("/api/control-panel/reset", { method: "POST" });
+            await loadGatewayPage();
+        }
+
+        async function loadGatewayPage() {
+            try {
+                const response = await fetch("/api/control-panel");
+                if (!response.ok) throw new Error("Gateway panel verisi alinamadi");
+                const data = await response.json();
+                const gateway = data.gateway || {};
+                const totals = data.totals || {};
+
+                gatewayBadge.className = `badge ${gateway.enabled ? "ok" : "off"}`;
+                gatewayBadge.textContent = gateway.enabled ? "Portkey aktif" : "Portkey kapali";
+                totalCost.textContent = formatUsd(totals.estimated_cost_usd);
+                totalTokens.textContent = formatInt(totals.total_tokens);
+                totalCalls.textContent = formatInt(totals.llm_calls);
+
+                gatewayBase.textContent = gateway.base_url || "-";
+                gatewayDashboard.textContent = gateway.dashboard_url || "-";
+                gatewayMode.textContent = gateway.mode || "-";
+                gatewayProvider.textContent = gateway.provider || "-";
+                gatewayPrefix.textContent = gateway.model_prefix || "-";
+                gatewayVirtual.textContent = gateway.virtual_key_configured ? "Tanimli" : "Yok";
+                gatewayConfig.textContent = gateway.config_configured ? "Tanimli" : "Yok";
+                dashboardLink.href = gateway.dashboard_url || "https://app.portkey.ai";
+
+                const recentCount = (data.recent || []).length;
+                visibilityHint.textContent = gateway.enabled
+                    ? `Gateway aktif. Bu uygulamadan giden yeni LLM istekleri Portkey dashboard'da gorunmeli. Yerelde ${recentCount} son kayit tutuluyor.`
+                    : "Portkey kapali. Dashboard'da gorunurluk icin gateway aktif olmali ve uygulama yeniden bu ayarla baslatilmali.";
+
+                renderRows(setupChecks, buildSetupChecks(data), "Kurulum denetimi yok.");
+
+                const engineRows = Object.entries(data.engines || {}).map(([name, item]) => `
+                    <div class="list-row">
+                        <div>
+                            <div class="list-main">${name === "maf" ? "Microsoft Agent Framework" : "LangGraph"}</div>
+                            <div class="list-meta">${formatInt(item.requests)} istek | ${formatInt(item.llm_calls)} LLM cagrisi</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="list-main">${formatUsd(item.estimated_cost_usd)}</div>
+                            <div class="list-meta">${formatInt(item.total_tokens)} token</div>
+                        </div>
+                    </div>
+                `);
+                renderRows(engineStats, engineRows, "Henuz motor verisi yok.");
+
+                const components = [];
+                for (const [engineName, engineData] of Object.entries(data.engines || {})) {
+                    for (const [componentName, componentData] of Object.entries((engineData.components || {}))) {
+                        components.push({ engineName, componentName, componentData });
+                    }
+                }
+                const componentRows = components.map(({ engineName, componentName, componentData }) => `
+                    <div class="list-row">
+                        <div>
+                            <div class="list-main">${engineName} / ${componentName}</div>
+                            <div class="list-meta">${formatInt(componentData.llm_calls)} cagri</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="list-main">${formatUsd(componentData.estimated_cost_usd)}</div>
+                            <div class="list-meta">${formatInt(componentData.total_tokens)} token</div>
+                        </div>
+                    </div>
+                `);
+                renderRows(componentStats, componentRows, "Henuz komponent verisi yok.");
+
+                const modelRows = Object.entries(data.models || {}).map(([name, item]) => `
+                    <div class="list-row">
+                        <div>
+                            <div class="list-main">${name}</div>
+                            <div class="list-meta">${formatInt(item.llm_calls)} cagri</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="list-main">${formatUsd(item.estimated_cost_usd)}</div>
+                            <div class="list-meta">${formatInt(item.total_tokens)} token</div>
+                        </div>
+                    </div>
+                `);
+                renderRows(modelStats, modelRows, "Henuz model verisi yok.");
+
+                const recent = (data.recent || []).slice(0, 12).map((item) => `
+                    <div class="list-row">
+                        <div>
+                            <div class="list-main">${item.engine} / ${item.component}</div>
+                            <div class="list-meta">${item.model_id}</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="list-main">${formatUsd(item.estimated_cost_usd)}</div>
+                            <div class="list-meta">${formatInt(item.total_tokens)} token</div>
+                        </div>
+                    </div>
+                `);
+                renderRows(recentRows, recent, "Henuz yerel gateway kaydi yok.");
+            } catch (err) {
+                gatewayBadge.className = "badge warn";
+                gatewayBadge.textContent = "Panel hatasi";
+                visibilityHint.textContent = err.message;
+            }
+        }
+
+        loadGatewayPage();
+        setInterval(loadGatewayPage, 12000);
+    </script>
+</body>
+</html>

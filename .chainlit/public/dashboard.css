@@ -1,0 +1,28 @@
+body.gateway-dashboard-mode {
+  background:
+    radial-gradient(circle at top left, rgba(255, 106, 61, 0.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(53, 91, 255, 0.12), transparent 26%),
+    linear-gradient(180deg, #f7f9fd, #eef3fb) !important;
+}
+
+body.gateway-dashboard-mode [data-hidden-by-dashboard="true"] {
+  display: none !important;
+}
+
+body.gateway-dashboard-mode .step,
+body.gateway-dashboard-mode [class*="message"] {
+  max-width: 1180px !important;
+}
+
+body.gateway-dashboard-mode [class*="message"] {
+  border-radius: 20px !important;
+}
+
+body.gateway-dashboard-mode table {
+  font-size: 13px !important;
+}
+
+body.gateway-dashboard-mode .MuiDataGrid-root,
+body.gateway-dashboard-mode [role="grid"] {
+  min-height: 320px !important;
+}

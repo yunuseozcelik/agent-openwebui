@@ -1,34 +1,28 @@
-# tools/__init__.py
-
-# Mevcut tool'lar
-from .hr_tools import check_leave_balance, request_leave, check_salary_slip, get_employee_info
-from .it_tools import create_support_ticket, check_ticket_status, request_equipment
-from .finance_tools import request_advance_payment, check_expense_status, submit_expense_report
-from .approval_tools import check_pending_approvals, approve_request, reject_request
+from .approval_tools import approve_request, check_pending_approvals, reject_request
+from .finance_tools import check_expense_status, request_advance_payment, submit_expense_report
+from .hr_tools import check_leave_balance, check_salary_slip, get_employee_info, request_leave
+from .ifs_tools import lookup_part_detail, lookup_user_detail, lookup_user_info
+from .it_tools import check_ticket_status, create_support_ticket, request_equipment
 from .math_tools import calculate_wolfram
+from .office_tools import get_lunch_menu, get_shuttle_times
 
-# IFS tool'ları
-from .ifs_tools import lookup_user_info, lookup_user_detail, lookup_part_detail, get_real_lunch_menu
-from .office_tools import get_shuttle_times
 
 DEPARTMENT_TOOLS = {
     "HR": [
-        lookup_user_info,         # GERÇEK - IFS API (email ile kullanıcı bilgisi)
-        lookup_user_detail,       # GERÇEK - IFS API (sicil no / email ile detay, izin bilgileri)
+        lookup_user_info,
+        lookup_user_detail,
         check_leave_balance,
         get_employee_info,
         request_leave,
         check_salary_slip,
         check_pending_approvals,
     ],
-
     "IT": [
         create_support_ticket,
         check_ticket_status,
         request_equipment,
-        lookup_part_detail,       # GERÇEK - IFS API
+        lookup_part_detail,
     ],
-
     "Finance": [
         request_advance_payment,
         check_expense_status,
@@ -36,14 +30,12 @@ DEPARTMENT_TOOLS = {
         approve_request,
         reject_request,
     ],
-
     "Math": [
         calculate_wolfram,
     ],
-
     "General": [
-        get_real_lunch_menu,      # GERÇEK - IFS API
-        get_shuttle_times,        # mock (endpoint yok)
+        get_lunch_menu,
+        get_shuttle_times,
     ],
 }
 

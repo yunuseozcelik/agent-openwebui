@@ -1,7 +1,13 @@
 from langchain_core.tools import tool
 from datetime import datetime
 import json
-from tools.ifs_client import get_user_by_email, get_user_detail, get_empno_from_email
+from tools.ifs_client import (
+    MOCK_MODE,
+    MOCK_USER_EMAIL,
+    get_user_by_email,
+    get_user_detail,
+    get_empno_from_email,
+)
 
 
 @tool
@@ -13,6 +19,9 @@ def get_employee_info(user_email: str = "") -> str:
     Args:
         user_email: Kullanıcının e-posta adresi (sistem mesajındaki context'ten alınmalı)
     """
+    if not user_email and MOCK_MODE:
+        user_email = MOCK_USER_EMAIL
+
     if not user_email:
         return json.dumps({"error": "E-posta adresi gerekli. Sistem mesajindaki kullanici bilgisinden alinmali."}, ensure_ascii=False)
 
@@ -56,6 +65,9 @@ def check_leave_balance(user_email: str = "") -> str:
     Args:
         user_email: Kullanıcının e-posta adresi (sistem mesajındaki context'ten alınmalı)
     """
+    if not user_email and MOCK_MODE:
+        user_email = MOCK_USER_EMAIL
+
     if not user_email:
         return json.dumps({"error": "E-posta adresi gerekli. Sistem mesajindaki kullanici bilgisinden alinmali."}, ensure_ascii=False)
 

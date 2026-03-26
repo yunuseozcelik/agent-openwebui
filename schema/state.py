@@ -1,6 +1,6 @@
 # schema/state.py
 import operator
-from typing import Annotated, Sequence, TypedDict, Union, Literal, Optional, Dict
+from typing import Annotated, Sequence, TypedDict, Union, Literal, Optional, Dict, List
 
 from langchain_core.messages import BaseMessage
 
@@ -13,3 +13,14 @@ class AgentState(TypedDict):
 
     # user_context: OpenWebUI'den gelen kullanıcı bilgileri (email, isim, tarih)
     user_context: Optional[Dict[str, str]]
+
+    # visited_agents: Zaten calistirilmis agent listesi (dongu onleme)
+    visited_agents: Optional[List[str]]
+
+    # shared_context: Agent'lar arasi paylasimli veri deposu
+    # Her agent kendi sonuclarini buraya yazar, diger agent'lar okuyabilir
+    # Ornek: {"HR": {"kalan_izin": 15, "izin_talebi": "onay_bekliyor"}, "Finance": {"avans": 5000}}
+    shared_context: Optional[Dict[str, Dict]]
+
+    # plan_steps: Supervisor tarafindan ilk adimda uretilen checklist plani
+    plan_steps: Optional[List[Dict[str, str]]]

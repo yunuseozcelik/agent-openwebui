@@ -1,7 +1,15 @@
 import requests
 import time
 from typing import List, Dict, Any
+from datetime import datetime, timedelta
 from config import IFS_API_BASE_URL, IFS_API_TIMEOUT, IFS_AUTH_URL, IFS_CLIENT_ID, IFS_CLIENT_SECRET
+
+# Mock modu: IFS_CLIENT_ID/SECRET yoksa mock data kullan
+MOCK_MODE = not IFS_CLIENT_ID or not IFS_CLIENT_SECRET
+MOCK_USER_EMAIL = "demo.user@sirket.com"
+MOCK_USER_NAME = "Demo Kullanici"
+if MOCK_MODE:
+    print("[IFS] Mock mod aktif - IFS_CLIENT_ID/SECRET bulunamadi, ornek veri kullanilacak.")
 
 # Token cache
 _token_cache = {
@@ -62,6 +70,8 @@ def get_user_by_email(email: str) -> List[Dict[str, Any]]:
     GET /api/user/{email}
     Returns: [{empNo, name, unit, position}]
     """
+    if MOCK_MODE:
+        return [{"empNo": "12345", "name": MOCK_USER_NAME, "unit": "Muhendislik", "position": "Kidemli Muhendis"}]
     url = f"{IFS_API_BASE_URL}/api/user/{email}"
     response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
     if not response.ok:
@@ -79,6 +89,21 @@ def get_user_detail(badgeno: str) -> List[Dict[str, Any]]:
                hizmetSuresi, toplamIzin, kullandigiIzin, kalanIzin,
                ecbSaat, mazeretIzin, sonDurum}]
     """
+    if MOCK_MODE:
+        return [{
+            "sicilNo": badgeno or "12345",
+            "adSoyad": MOCK_USER_NAME,
+            "birim": "Muhendislik",
+            "pozisyon": "Kidemli Muhendis",
+            "mail": MOCK_USER_EMAIL,
+            "hizmetSuresi": "8 Yil 3 Ay",
+            "toplamIzin": 24,
+            "kullandigiIzin": 9,
+            "kalanIzin": 15,
+            "ecbSaat": 12.5,
+            "mazeretIzin": 2,
+            "sonDurum": "Aktif",
+        }]
     if len(badgeno) == 4:
         badgeno = f"0{badgeno}"
     elif len(badgeno) != 5:
@@ -96,6 +121,8 @@ def get_user_detail(badgeno: str) -> List[Dict[str, Any]]:
 
 def get_empno_from_email(email: str) -> str:
     """Email -> empNo cevirici."""
+    if MOCK_MODE:
+        return "12345"
     users = get_user_by_email(email)
     if not users:
         raise ValueError(f"Bu e-posta icin personel bulunamadi: {email}")
@@ -110,6 +137,8 @@ def get_part_detail(parcano: str) -> List[Dict[str, Any]]:
     GET /api/User/PartDetail/{parcano}
     Returns: [{parcaNo, aciklama, eo, teknikKoordinator, urunKodu, tipKodu}]
     """
+    if MOCK_MODE:
+        return [{"parcaNo": parcano, "aciklama": "Hidrolik Pompa Modulu", "eo": "EO-2024-0158", "teknikKoordinator": "Mehmet Demir", "urunKodu": "HPM-300", "tipKodu": "TIP-A"}]
     url = f"{IFS_API_BASE_URL}/api/User/PartDetail/{parcano}"
     response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
     if not response.ok:
@@ -125,6 +154,25 @@ def get_meal_list() -> List[Dict[str, Any]]:
     GET /api/User/YemekListesi
     Returns: [{tarih, yemek1-4, toplamKalori, salata1-13}]
     """
+    if MOCK_MODE:
+        today = datetime.now()
+        meals = []
+        menu_data = [
+            ("Mercimek Corbasi", "Tavuk Sote", "Pilav", "Ayran", 650),
+            ("Domates Corbasi", "Kofte", "Makarna", "Komposto", 720),
+            ("Ezogelin Corbasi", "Izgara Tavuk", "Bulgur Pilavi", "Cacik", 680),
+            ("Yayla Corbasi", "Etli Nohut", "Pirinc Pilavi", "Salata", 710),
+            ("Sehriye Corbasi", "Tas Kebabi", "Patates Pure", "Ayran", 750),
+        ]
+        for i in range(5):
+            d = today + timedelta(days=i)
+            m = menu_data[i]
+            meals.append({
+                "tarih": d.strftime("%d.%m.%Y"),
+                "yemek1": m[0], "yemek2": m[1], "yemek3": m[2], "yemek4": m[3],
+                "toplamKalori": m[4],
+            })
+        return meals
     url = f"{IFS_API_BASE_URL}/api/User/YemekListesi"
     response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
     if not response.ok:
