@@ -12,7 +12,18 @@
       "Bash(git reset:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nmicrosoft agent guncellemesi\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git checkout:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(findstr:*)",
+      "Bash(git -C \"E:\\\\agent_supervisor\" branch -a)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(venvScriptsactivate)",
+      "Bash(pip install:*)",
+      "Bash(cmd.exe /c \"E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe install agent-framework[openai] --pre 2>&1\")",
+      "Bash(cmd.exe /c \"E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe install \"\"agent-framework[openai]\"\" --pre\")",
+      "Bash(powershell.exe -Command \"& ''E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe'' install ''agent-framework[openai]'' --pre 2>&1\")",
+      "Bash(powershell.exe -Command \"& ''E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\python.exe'' -c ''from agent_framework import Agent, tool; from agent_framework.openai import OpenAIChatClient; from agent_framework.orchestrations import HandoffBuilder; print\\(\"\"OK - all imports work\"\"\\)'' 2>&1\")",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

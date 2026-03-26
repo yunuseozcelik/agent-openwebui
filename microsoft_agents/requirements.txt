@@ -1,8 +1,4 @@
-azure-ai-projects>=2.0.0
-azure-identity
-openai
+agent-framework[openai] --pre
 chainlit
-fastapi
-uvicorn
-pydantic
 python-dotenv
+requests

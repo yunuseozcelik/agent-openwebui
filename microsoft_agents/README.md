@@ -1,7 +1,23 @@
-# Microsoft Azure AI Agent Service - Demo
+# Microsoft Agent Framework - IFS Kurumsal Asistan
 
-Mevcut LangGraph supervisor agent sisteminin Azure AI tarafindaki karsiligi.
-Ayni senaryo (HR + IT agent) Azure OpenAI ile calisir.
+Microsoft Agent Framework (`agent-framework`) kullanilarak olusturulmus multi-agent supervisor sistemi.
+Chainlit UI uzerinden calisir.
+
+## Mimari
+
+```
+Kullanici (Chainlit UI)
+    |
+    v
+Triage Agent (yonlendirici)
+    |
+    +-- hr_agent      : Izin, maas, personel bilgileri (IFS API)
+    +-- it_agent      : Destek talebi, ekipman (IFS API)
+    +-- finance_agent : Avans, harcama raporu
+    +-- general_agent : Yemek menusu, parca sorgulama (IFS API)
+```
+
+**HandoffBuilder** ile triage agent kullanici mesajini analiz edip uygun departman agent'ina yonlendirir.
 
 ## Kurulum
 
@@ -17,60 +33,42 @@ pip install -r requirements.txt
 Proje kokundeki `.env` dosyasina su degiskenleri ekleyin:
 
 ```env
-# Azure OpenAI
-AZURE_OPENAI_ENDPOINT=https://<resource-name>.openai.azure.com/
-AZURE_OPENAI_API_KEY=<api-key>
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
-AZURE_OPENAI_API_VERSION=2025-01-01-preview
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+
+# IFS ERP (gercek API icin)
+IFS_API_BASE_URL=https://commonapi.fnss.com.tr
+IFS_AUTH_URL=https://fnssaiservice.fnss.com.tr/api/Auth/Login
+IFS_CLIENT_ID=<client-id>
+IFS_CLIENT_SECRET=<client-secret>
 ```
 
-### 3. Calistir
+### 3. Chainlit ile calistir
 
 ```bash
-python main.py
+cd microsoft_agents
+chainlit run app.py
 ```
 
-Server http://localhost:9098 adresinde baslar.
-
-### 4. Test et
-
-```bash
-curl -X POST http://localhost:9098/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "azure-agent",
-    "messages": [{"role": "user", "content": "kalan iznim ne kadar?"}]
-  }'
-```
-
-### 5. Open WebUI ile test
-
-Open WebUI'de yeni bir OpenAI-uyumlu baglanti ekleyin:
-- **URL**: http://localhost:9098/v1
-- **Model**: azure-agent
+Tarayicinizda `http://localhost:8000` adresinde acilir.
 
 ## Dosya Yapisi
 
 ```
 microsoft_agents/
-├── main.py          # FastAPI server (port 9098)
-├── agents.py        # Supervisor + HR/IT worker agent'lar
-├── tools.py         # Tool tanimlari ve fonksiyonlari
-├── config.py        # Azure yapilandirmasi
-├── requirements.txt # Python bagimliliklari
-├── COMPARISON.md    # 3 platform karsilastirmasi
-└── copilot_studio_guide.md  # Copilot Studio kurulum rehberi
+├── app.py              # Chainlit UI (ana giris noktasi)
+├── agent_setup.py      # Agent tanimlari + HandoffBuilder workflow
+├── ifs_tools.py        # IFS tool'lari (@tool decorator)
+├── config.py           # OpenAI + IFS yapilandirmasi
+├── requirements.txt    # Python bagimliliklari
+├── COMPARISON.md       # Platform karsilastirmasi
+└── copilot_studio_guide.md
 ```
 
-## Karsilastirma
+## Kullanilan Teknolojiler
 
-| | LangGraph (port 9099) | Azure Agent (port 9098) |
-|---|---|---|
-| Supervisor LLM | GPT-5.2 | GPT-4o (Azure) |
-| Worker LLM | GPT-4o-mini | GPT-4o (Azure) |
-| Orkestrasyon | StateGraph | JSON routing |
-| Tool calling | LangChain @tool | OpenAI function calling |
-| State | TypedDict + operator.add | Stateless (mesaj bazli) |
-
-Detayli karsilastirma icin: [COMPARISON.md](COMPARISON.md)
-Copilot Studio rehberi icin: [copilot_studio_guide.md](copilot_studio_guide.md)
+- **Microsoft Agent Framework** (`agent-framework`): Agent olusturma ve orkestrasyon
+- **HandoffBuilder**: Multi-agent routing (triage -> specialist)
+- **Chainlit**: Web tabanli sohbet arayuzu
+- **OpenAI API**: LLM backend (gpt-4o)
+- **IFS ERP API**: Gercek kurumsal veri entegrasyonu

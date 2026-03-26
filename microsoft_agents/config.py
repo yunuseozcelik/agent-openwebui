@@ -3,14 +3,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Azure AI Foundry Project endpoint
-# Ornek: "https://<project-name>.services.ai.azure.com/api/projects/<project-id>"
-AZURE_AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_PROJECT_ENDPOINT", "")
+# OpenAI
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
-# Azure OpenAI deployment adi (ornegin "gpt-4o")
-AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
-
-# Opsiyonel: Azure OpenAI icin ayri endpoint ve key (agent-framework icin)
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+# IFS ERP API
+IFS_API_BASE_URL = os.getenv("IFS_API_BASE_URL", "https://commonapi.fnss.com.tr")
+IFS_API_TIMEOUT = int(os.getenv("IFS_API_TIMEOUT", "15"))
+IFS_AUTH_URL = os.getenv("IFS_AUTH_URL", "https://fnssaiservice.fnss.com.tr/api/Auth/Login")
+IFS_CLIENT_ID = os.getenv("IFS_CLIENT_ID", "")
+IFS_CLIENT_SECRET = os.getenv("IFS_CLIENT_SECRET", "")
