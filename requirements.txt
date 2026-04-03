@@ -1,0 +1,6 @@
+agent-framework[openai] --pre
+fastapi
+uvicorn
+pydantic
+python-dotenv
+requests
