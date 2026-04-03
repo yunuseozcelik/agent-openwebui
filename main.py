@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from context import extract_ow_context
-from config import CORS_ALLOW_ORIGINS, MAX_HISTORY_MESSAGES
+from config import AGENT_ALLOWED_EMAILS, CORS_ALLOW_ORIGINS, MAX_HISTORY_MESSAGES
 from cost_control import cost_tracker
 from domains import AGENT_LABELS
 from orchestrator import MicrosoftAgentOrchestrator
@@ -128,6 +128,41 @@ def to_agent_history(request_messages: List[Message]) -> list[dict[str, str]]:
             }
         )
     return history[-MAX_HISTORY_MESSAGES:]
+
+
+def _normalize_email(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _extract_request_context(request_messages: List[Message]) -> dict[str, str | None]:
+    raw_messages = [
+        {
+            "role": item.role,
+            "content": normalize_content(item.content),
+        }
+        for item in request_messages
+    ]
+    return extract_ow_context(raw_messages)
+
+
+def _ensure_agent_access(user_ctx: dict[str, str | None]) -> None:
+    if not AGENT_ALLOWED_EMAILS:
+        return
+
+    user_email = _normalize_email(user_ctx.get("user_email"))
+    allowed_emails = {_normalize_email(item) for item in AGENT_ALLOWED_EMAILS}
+
+    if not user_email:
+        raise HTTPException(
+            status_code=403,
+            detail="FNSS Agent kullanimi icin oturum e-posta bilginiz bulunamadi.",
+        )
+
+    if user_email not in allowed_emails:
+        raise HTTPException(
+            status_code=403,
+            detail="Bu hesap FNSS Agent ozelligi icin yetkili degil.",
+        )
 
 
 def _workflow_state_to_mode(state: str | None) -> str:
@@ -255,8 +290,9 @@ async def stream_maf(request: ChatCompletionRequest, completion_id: str, created
     if not maf_orchestrator:
         raise HTTPException(status_code=500, detail="Microsoft Agent Framework yuklenemedi.")
 
+    user_ctx = _extract_request_context(request.messages)
+    _ensure_agent_access(user_ctx)
     history = to_agent_history(request.messages)
-    user_ctx = extract_ow_context(history)
 
     initial_status_chunk = _make_status_chunk(
         completion_id,
@@ -408,8 +444,9 @@ async def chat_completions(request: ChatCompletionRequest):
         if not request.stream:
             if not maf_orchestrator:
                 raise HTTPException(status_code=500, detail="MAF yuklenemedi.")
+            user_ctx = _extract_request_context(request.messages)
+            _ensure_agent_access(user_ctx)
             history = to_agent_history(request.messages)
-            user_ctx = extract_ow_context(history)
             result = await maf_orchestrator.run(
                 history,
                 conversation_id=request.conversation_id,
