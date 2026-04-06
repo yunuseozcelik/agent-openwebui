@@ -122,20 +122,20 @@ def _normalize_meal_records(records: list[dict[str, Any]]) -> list[dict[str, Any
 
 
 @tool(approval_mode="never_require")
-def get_user_information(
+async def get_user_information(
     user_email: Annotated[str, Field(description="Calisan e-posta adresi. Bos ise oturum kullanicisi tercih edilir.")] = "",
 ) -> str:
     """IFS sisteminden temel kullanici bilgilerini getirir."""
     try:
         email = _normalize_user_email(user_email)
-        records = get_user_by_email(email)
+        records = await get_user_by_email(email)
         return json.dumps(_normalize_user_records(records), ensure_ascii=False)
     except Exception as exc:
         return _json_error(str(exc))
 
 
 @tool(approval_mode="never_require")
-def get_user_detail_by_badgeno(
+async def get_user_detail_by_badgeno(
     badgeno: Annotated[str, Field(description="Sicil numarasi. 4 veya 5 haneli olabilir.")] = "",
     user_email: Annotated[str, Field(description="Sicil numarasi bilinmiyorsa kullanici e-postasi.")] = "",
 ) -> str:
@@ -144,15 +144,15 @@ def get_user_detail_by_badgeno(
         resolved_badgeno = (badgeno or "").strip()
         if not resolved_badgeno:
             email = _normalize_user_email(user_email)
-            resolved_badgeno = get_empno_from_email(email)
-        records = get_user_detail(_normalize_badgeno(resolved_badgeno))
+            resolved_badgeno = await get_empno_from_email(email)
+        records = await get_user_detail(_normalize_badgeno(resolved_badgeno))
         return json.dumps(_normalize_user_detail_records(records), ensure_ascii=False)
     except Exception as exc:
         return _json_error(str(exc))
 
 
 @tool(approval_mode="never_require")
-def get_part_detail_by_parcano(
+async def get_part_detail_by_parcano(
     parcano: Annotated[str, Field(description="IFS parca numarasi.")],
 ) -> str:
     """IFS sisteminden parca detay bilgilerini getirir."""
@@ -160,19 +160,19 @@ def get_part_detail_by_parcano(
         value = (parcano or "").strip()
         if not value:
             raise ValueError("Parca numarasi gerekli.")
-        records = get_part_detail(value)
+        records = await get_part_detail(value)
         return json.dumps(_normalize_part_records(records), ensure_ascii=False)
     except Exception as exc:
         return _json_error(str(exc))
 
 
 @tool(approval_mode="never_require")
-def get_meal_or_yemek_list(
+async def get_meal_or_yemek_list(
     date: Annotated[str, Field(description="today veya DD.MM.YYYY formatinda tarih.")] = "today",
 ) -> str:
     """IFS sisteminden yemek listesini getirir."""
     try:
-        records = _normalize_meal_records(get_meal_list())
+        records = _normalize_meal_records(await get_meal_list())
         requested_date = datetime.now().strftime("%d.%m.%Y") if date == "today" else date
         selected_meal = next((item for item in records if item.get("tarih") == requested_date), None)
         payload = {

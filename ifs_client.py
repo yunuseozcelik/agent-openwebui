@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
-import requests
+import httpx
 
 from config import (
     IFS_API_BASE_URL,
@@ -19,14 +19,14 @@ from config import (
 
 
 HAS_IFS_CREDENTIALS = bool(IFS_CLIENT_ID and IFS_CLIENT_SECRET)
-MOCK_MODE = IFS_FORCE_MOCK_MODE
+MOCK_MODE = IFS_FORCE_MOCK_MODE or not HAS_IFS_CREDENTIALS
 MOCK_USER_EMAIL = "demo.user@sirket.com"
 MOCK_USER_NAME = "Demo Kullanici"
 
-if MOCK_MODE:
+if MOCK_MODE and IFS_FORCE_MOCK_MODE:
     print("[IFS] Mock mod explicit olarak aktif - ornek veri kullanilacak.")
-elif not HAS_IFS_CREDENTIALS:
-    print("[IFS] Gercek IFS credential'lari bulunamadi. IFS sorgulari hata dondurecek.")
+elif MOCK_MODE:
+    print("[IFS] Gercek IFS credential'lari bulunamadi. Mock moda geciliyor.")
 
 
 _token_cache = {
@@ -45,7 +45,7 @@ def _require_real_ifs_config() -> None:
         )
 
 
-def _get_token() -> str:
+async def _get_token() -> str:
     """Fetches and caches the Bearer token from the FNSS auth service."""
     now = time.time()
 
@@ -58,8 +58,9 @@ def _get_token() -> str:
         "clientId": IFS_CLIENT_ID,
         "Secret": IFS_CLIENT_SECRET,
     }
-    response = requests.post(IFS_AUTH_URL, json=payload, timeout=IFS_API_TIMEOUT)
-    if not response.ok:
+    async with httpx.AsyncClient(timeout=IFS_API_TIMEOUT) as client:
+        response = await client.post(IFS_AUTH_URL, json=payload)
+    if response.status_code >= 400:
         raise ValueError(f"IFS Auth hatasi: HTTP {response.status_code} - {response.text}")
 
     data = response.json()
@@ -74,15 +75,15 @@ def _get_token() -> str:
     return token
 
 
-def _headers() -> dict[str, str]:
-    token = _get_token()
+async def _headers() -> dict[str, str]:
+    token = await _get_token()
     return {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {token}",
     }
 
 
-def get_user_by_email(email: str) -> list[dict[str, Any]]:
+async def get_user_by_email(email: str) -> list[dict[str, Any]]:
     if MOCK_MODE:
         return [
             {
@@ -95,8 +96,10 @@ def get_user_by_email(email: str) -> list[dict[str, Any]]:
 
     _require_real_ifs_config()
     url = f"{IFS_API_BASE_URL}/api/user/{email}"
-    response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
-    if not response.ok:
+    headers = await _headers()
+    async with httpx.AsyncClient(timeout=IFS_API_TIMEOUT) as client:
+        response = await client.get(url, headers=headers)
+    if response.status_code >= 400:
         raise ValueError(f"IFS API hatasi: HTTP {response.status_code}")
     data = response.json()
     if not isinstance(data, list):
@@ -104,7 +107,7 @@ def get_user_by_email(email: str) -> list[dict[str, Any]]:
     return data
 
 
-def get_user_detail(badgeno: str) -> list[dict[str, Any]]:
+async def get_user_detail(badgeno: str) -> list[dict[str, Any]]:
     if MOCK_MODE:
         return [
             {
@@ -130,8 +133,10 @@ def get_user_detail(badgeno: str) -> list[dict[str, Any]]:
         raise ValueError("Sicil numarasi 4 veya 5 haneli olmalidir.")
 
     url = f"{IFS_API_BASE_URL}/api/User/Detail/{badgeno}"
-    response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
-    if not response.ok:
+    headers = await _headers()
+    async with httpx.AsyncClient(timeout=IFS_API_TIMEOUT) as client:
+        response = await client.get(url, headers=headers)
+    if response.status_code >= 400:
         raise ValueError(f"IFS API hatasi: HTTP {response.status_code}")
     data = response.json()
     if not isinstance(data, list):
@@ -139,12 +144,12 @@ def get_user_detail(badgeno: str) -> list[dict[str, Any]]:
     return data
 
 
-def get_empno_from_email(email: str) -> str:
+async def get_empno_from_email(email: str) -> str:
     if MOCK_MODE:
         return "12345"
 
     _require_real_ifs_config()
-    users = get_user_by_email(email)
+    users = await get_user_by_email(email)
     if not users:
         raise ValueError(f"Bu e-posta icin personel bulunamadi: {email}")
     empno = users[0].get("empNo")
@@ -153,7 +158,7 @@ def get_empno_from_email(email: str) -> str:
     return empno
 
 
-def get_part_detail(parcano: str) -> list[dict[str, Any]]:
+async def get_part_detail(parcano: str) -> list[dict[str, Any]]:
     if MOCK_MODE:
         return [
             {
@@ -168,8 +173,10 @@ def get_part_detail(parcano: str) -> list[dict[str, Any]]:
 
     _require_real_ifs_config()
     url = f"{IFS_API_BASE_URL}/api/User/PartDetail/{parcano}"
-    response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
-    if not response.ok:
+    headers = await _headers()
+    async with httpx.AsyncClient(timeout=IFS_API_TIMEOUT) as client:
+        response = await client.get(url, headers=headers)
+    if response.status_code >= 400:
         raise ValueError(f"IFS API hatasi: HTTP {response.status_code}")
     data = response.json()
     if not isinstance(data, list):
@@ -177,7 +184,7 @@ def get_part_detail(parcano: str) -> list[dict[str, Any]]:
     return data
 
 
-def get_meal_list() -> list[dict[str, Any]]:
+async def get_meal_list() -> list[dict[str, Any]]:
     if MOCK_MODE:
         today = datetime.now()
         meals = []
@@ -205,8 +212,10 @@ def get_meal_list() -> list[dict[str, Any]]:
 
     _require_real_ifs_config()
     url = f"{IFS_API_BASE_URL}/api/User/YemekListesi"
-    response = requests.get(url, headers=_headers(), timeout=IFS_API_TIMEOUT)
-    if not response.ok:
+    headers = await _headers()
+    async with httpx.AsyncClient(timeout=IFS_API_TIMEOUT) as client:
+        response = await client.get(url, headers=headers)
+    if response.status_code >= 400:
         raise ValueError(f"IFS API hatasi: HTTP {response.status_code}")
     data = response.json()
     if not isinstance(data, list):
