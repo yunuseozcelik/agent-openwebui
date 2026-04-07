@@ -6,8 +6,8 @@ from typing import Optional, Dict
 
 def extract_ow_context(messages: list) -> Dict[str, Optional[str]]:
     """
-    Mesaj listesinden [OW_CONTEXT]...[/OW_CONTEXT] blogunu parse eder.
-    Ayrica ifs_pipeline.py'nin 'SISTEM BILGISI' formatini da destekler.
+    Mesaj listesinden [OW_CONTEXT]...[/OW_CONTEXT] bloğunu parse eder.
+    Ayrıca ifs_pipeline.py'nin 'SİSTEM BİLGİSİ' formatını da destekler.
     """
     context = {
         "user_name": None,
@@ -20,7 +20,7 @@ def extract_ow_context(messages: list) -> Dict[str, Optional[str]]:
         if not content:
             continue
 
-        # Format 1: [OW_CONTEXT] bloku (main.py uzerinden OpenWebUI)
+        # Format 1: [OW_CONTEXT] bloğu (main.py üzerinden OpenWebUI)
         if "[OW_CONTEXT]" in content:
             match = re.search(r"\[OW_CONTEXT\](.*?)\[/OW_CONTEXT\]", content, re.DOTALL)
             if match:
@@ -35,7 +35,7 @@ def extract_ow_context(messages: list) -> Dict[str, Optional[str]]:
                         context["current_date"] = line.split(":", 1)[1].strip().split("(")[0].strip()
             break
 
-        # Format 2: SISTEM BILGISI
+        # Format 2: SİSTEM BİLGİSİ
         if "Konuştuğun Kullanıcı:" in content:
             name_match = re.search(r"Konuştuğun Kullanıcı:\s*(.+?)\s*\((.+?)\)", content)
             if name_match:

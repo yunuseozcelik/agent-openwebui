@@ -224,7 +224,7 @@ class MicrosoftAgentOrchestrator:
                 component=step.agent.lower(),
                 default_model_id=self.worker_model_id,
             )
-            raw_output = self._extract_text(response) or "Islem tamamlandi fakat bos bir cevap dondu."
+            raw_output = self._extract_text(response) or "İşlem tamamlandı fakat boş bir cevap döndü."
             structured_output = await self._parse_structured_agent_output(
                 raw_output,
                 step=step,
@@ -329,7 +329,7 @@ class MicrosoftAgentOrchestrator:
             normalized.append(
                 PlanStep(
                     agent=agent,
-                    description=description or f"{AGENT_LABELS[agent]} adimi calistiriliyor",
+                    description=description or f"{AGENT_LABELS[agent]} adımı çalıştırılıyor",
                 )
             )
 
@@ -342,7 +342,7 @@ class MicrosoftAgentOrchestrator:
         prompt = self._build_chat_prompt(history, user_context=user_context)
         response = await self.chat_agent.run(prompt)
         self._record_response_usage(response, component="chat", default_model_id=self.worker_model_id)
-        return self._extract_text(response) or "Merhaba, nasil yardimci olabilirim?"
+        return self._extract_text(response) or "Merhaba, nasıl yardımcı olabilirim?"
 
     def _build_plan_prompt(
         self,
@@ -357,32 +357,32 @@ class MicrosoftAgentOrchestrator:
         )
         last_user_message = self._get_last_user_message(history)
         return (
-            "KULLANICI MESAJ GECMISI\n"
+            "KULLANICI MESAJ GEÇMİŞİ\n"
             f"{self._format_history(history)}\n\n"
             "SON KULLANICI MESAJI\n"
             f"{last_user_message}\n\n"
-            "AKTIF WORKFLOW KONTEXTI\n"
+            "AKTİF WORKFLOW KONTEXTİ\n"
             f"{current_workflow_block}\n\n"
-            "JSON CIKTI SOZLESMESI\n"
+            "JSON ÇIKTI SÖZLEŞMESİ\n"
             "{\n"
             '  "continue_current_workflow": true | false,\n'
-            '  "steps": [{"agent": "HR_Agent|IT_Agent|General_Agent|Test_Agent", "description": "Turkce kisa aciklama"}]\n'
+            '  "steps": [{"agent": "HR_Agent|IT_Agent|General_Agent|Test_Agent", "description": "Türkçe kısa açıklama"}]\n'
             "}\n\n"
             "KURALLAR:\n"
-            "- Yalnizca gecerli JSON don. Markdown veya code fence kullanma.\n"
-            "- Aktif workflow varsa ve kullanicinin son mesaji o akistaki eksik bilgi/onay/yaniti tamamliyorsa continue_current_workflow=true yap.\n"
-            "- Kullanici yeni ve alakasiz bir konuya gectiyse continue_current_workflow=false yap ve yeni steps listesi uret.\n"
-            "- Selamlasma veya bos sohbet ise steps listesini [] don.\n"
-            "- Her adim icin kullaniciya gosterilecek kisa bir aciklama yaz.\n"
+            "- Yalnızca geçerli JSON dön. Markdown veya code fence kullanma.\n"
+            "- Aktif workflow varsa ve kullanıcının son mesajı o akıştaki eksik bilgi/onay/yanıtı tamamlıyorsa continue_current_workflow=true yap.\n"
+            "- Kullanıcı yeni ve alakasız bir konuya geçtiyse continue_current_workflow=false yap ve yeni steps listesi üret.\n"
+            "- Selamlaşma veya boş sohbet ise steps listesini [] dön.\n"
+            "- Her adım için kullanıcıya gösterilecek kısa bir açıklama yaz.\n"
         )
 
     def _build_chat_prompt(self, history: list[dict[str, str]], *, user_context: dict[str, str]) -> str:
         return (
-            "AKTIF KULLANICI BAGLAMI\n"
+            "AKTİF KULLANICI BAĞLAMI\n"
             f"{json.dumps(user_context, ensure_ascii=False)}\n\n"
-            "KONUSMA GECMISI\n"
+            "KONUŞMA GEÇMİŞİ\n"
             f"{self._format_history(history)}\n\n"
-            "Kullanicinin son mesajina Turkce cevap ver."
+            "Kullanıcının son mesajına Türkçe cevap ver."
         )
 
     def _build_step_prompt(
@@ -397,7 +397,7 @@ class MicrosoftAgentOrchestrator:
         shared_lines = "\n".join(
             f"- {AGENT_LABELS.get(agent, agent)}: {output}"
             for agent, output in shared_context.items()
-        ) or "- Henuz onceki adim yok."
+        ) or "- Henüz önceki adım yok."
         domain_spec = DOMAIN_REGISTRY[step.agent]
         current_workflow_block = (
             json.dumps(self._serialize_workflow_context(workflow_context), ensure_ascii=False)
@@ -408,52 +408,52 @@ class MicrosoftAgentOrchestrator:
         email_line = ""
         if domain_spec.requires_user_email and not user_context.get("user_email"):
             email_line = (
-                "\n- Kullanici e-postasi baglamda yok. Mock mod varsayimi ile demo kullanici uzerinden ilerle."
+                "\n- Kullanıcı e-postası bağlamda yok. Mock mod varsayımı ile demo kullanıcı üzerinden ilerle."
             )
 
         return (
-            f"AKTIF ADIM: {step.description}\n"
-            f"AKTIF UZMAN: {step.agent}\n\n"
-            "KULLANICI BAGLAMI\n"
+            f"AKTİF ADIM: {step.description}\n"
+            f"AKTİF UZMAN: {step.agent}\n\n"
+            "KULLANICI BAĞLAMI\n"
             f"{json.dumps(user_context, ensure_ascii=False)}\n\n"
-            "AKTIF WORKFLOW KONTEXTI\n"
+            "AKTİF WORKFLOW KONTEXTİ\n"
             f"{current_workflow_block}\n\n"
             "SON KULLANICI MESAJI\n"
             f"{last_user_message}\n\n"
-            "ONCEKI UZMAN CIKTILARI\n"
+            "ÖNCEKİ UZMAN ÇIKTILARI\n"
             f"{shared_lines}\n\n"
-            "KONUSMA GECMISI\n"
+            "KONUŞMA GEÇMİŞİ\n"
             f"{transcript}\n\n"
-            "JSON CIKTI SOZLESMESI\n"
+            "JSON ÇIKTI SÖZLEŞMESİ\n"
             "{\n"
-            '  "user_response": "Kullaniciya gidecek Turkce cevap",\n'
+            '  "user_response": "Kullanıcıya gidecek Türkçe cevap",\n'
             '  "workflow_state": "waiting_for_details | waiting_for_approval | completed",\n'
-            '  "summary": "UI paneli icin tek cumlelik kisa ozet",\n'
-            '  "shared_context": "Sonraki uzmanlara aktarilacak kisa olgusal ozet",\n'
-            '  "missing_fields": [{"name": "alan_adi", "label": "Gorunen Alan"}],\n'
+            '  "summary": "UI paneli için tek cümlelik kısa özet",\n'
+            '  "shared_context": "Sonraki uzmanlara aktarılacak kısa olgusal özet",\n'
+            '  "missing_fields": [{"name": "alan_adi", "label": "Görünen Alan"}],\n'
             '  "approval_required": true | false,\n'
             '  "result_reference": {"kind": "kayit_tipi", "id": "kayit_numarasi"} | null\n'
             "}\n\n"
             "KURALLAR:\n"
-            "- Sadece kendi uzmanlik alanini ele al.\n"
-            "- Kullaniciya ait veri gerekiyorsa user_email bilgisini kullan.\n"
-            "- Yalnizca desteklenen IFS sorgulari icin gerekli tool'lari cagir.\n"
-            f"- Alan ozel kurallar: {domain_spec.execution_guidance}\n"
-            "- waiting_for_details: Yalnizca desteklenen sorgu icin eksik veri istiyorsan kullan.\n"
-            "- waiting_for_approval: Yalnizca gercekten son kullanici onayi gerektiren desteklenen akista kullan.\n"
-            "- completed: Bilgi cevabi verdigin, sorguyu tamamladigin veya desteklenmeyen istegin kapsam disi oldugunu net acikladigin durumlarda kullan.\n"
-            "- Resmi talep, ticket, avans, bordro veya servis bilgisi olusturabilecegini iddia etme.\n"
-            "- Kullaniciya soru soruyorsan, netlestirme istiyorsan veya bilgi listesi istiyorsan completed deme.\n"
-            "- waiting_for_details kullaniyorsan eksik alanlari tahmin etme; gercekten hangi alanlari bekliyorsan tek tek yaz.\n"
-            "- Kullanicidan sadece tek bir detay bekliyorsan bile missing_fields listesine onu ekle.\n"
-            "- Yanitinin sonunda yalnizca nezaket veya kapanis sorusu varsa bu workflow_state'i waiting yapmaz; asıl islem sonucuna gore karar ver.\n"
-            "- missing_fields yalnizca waiting_for_details durumunda doldur.\n"
-            "- approval_required yalnizca waiting_for_approval durumunda true olsun.\n"
-            "- Gercek bir sistem kayit kimligi yoksa result_reference alanini null birak.\n"
-            "- waiting_for_details kullaniyorsan missing_fields bos olamaz.\n"
-            "- waiting_for_approval kullaniyorsan approval_required=true olmalidir.\n"
-            "- Aktif workflow varsa ve kullanicinin son mesaji o akisi tamamliyorsa ayni akisi devam ettir, bastan baslama.\n"
-            "- Yalnizca gecerli JSON don. Markdown veya code fence kullanma."
+            "- Sadece kendi uzmanlık alanını ele al.\n"
+            "- Kullanıcıya ait veri gerekiyorsa user_email bilgisini kullan.\n"
+            "- Yalnızca desteklenen IFS sorguları için gerekli tool'ları çağır.\n"
+            f"- Alan özel kuralları: {domain_spec.execution_guidance}\n"
+            "- waiting_for_details: Yalnızca desteklenen sorgu için eksik veri istiyorsan kullan.\n"
+            "- waiting_for_approval: Yalnızca gerçekten son kullanıcı onayı gerektiren desteklenen akışta kullan.\n"
+            "- completed: Bilgi cevabı verdiğin, sorguyu tamamladığın veya desteklenmeyen isteğin kapsam dışı olduğunu net açıkladığın durumlarda kullan.\n"
+            "- Resmi talep, ticket, avans, bordro veya servis bilgisi oluşturabileceğini iddia etme.\n"
+            "- Kullanıcıya soru soruyorsan, netleştirme istiyorsan veya bilgi listesi istiyorsan completed deme.\n"
+            "- waiting_for_details kullanıyorsan eksik alanları tahmin etme; gerçekten hangi alanları bekliyorsan tek tek yaz.\n"
+            "- Kullanıcıdan sadece tek bir detay bekliyorsan bile missing_fields listesine onu ekle.\n"
+            "- Yanıtının sonunda yalnızca nezaket veya kapanış sorusu varsa bu workflow_state'i waiting yapmaz; asıl işlem sonucuna göre karar ver.\n"
+            "- missing_fields yalnızca waiting_for_details durumunda doldur.\n"
+            "- approval_required yalnızca waiting_for_approval durumunda true olsun.\n"
+            "- Gerçek bir sistem kayıt kimliği yoksa result_reference alanını null bırak.\n"
+            "- waiting_for_details kullanıyorsan missing_fields boş olamaz.\n"
+            "- waiting_for_approval kullanıyorsan approval_required=true olmalıdır.\n"
+            "- Aktif workflow varsa ve kullanıcının son mesajı o akışı tamamlıyorsa aynı akışı devam ettir, baştan başlama.\n"
+            "- Yalnızca geçerli JSON dön. Markdown veya code fence kullanma."
             f"{email_line}"
         )
 
@@ -465,20 +465,20 @@ class MicrosoftAgentOrchestrator:
         user_context: dict[str, str],
     ) -> str:
         if not step_results:
-            return "Yanit olusturulamadi."
+            return "Yanıt oluşturulamadı."
         if len(step_results) == 1:
             return step_results[0].output
 
         summary_prompt = (
-            "KULLANICI BAGLAMI\n"
+            "KULLANICI BAĞLAMI\n"
             f"{json.dumps(user_context, ensure_ascii=False)}\n\n"
-            "KONUSMA OZETI\n"
+            "KONUŞMA ÖZETİ\n"
             f"{self._format_history(history)}\n\n"
-            "UZMAN CIKTILARI\n"
+            "UZMAN ÇIKTILARI\n"
             + "\n\n".join(
                 f"{AGENT_LABELS.get(item.agent, item.agent)}\n{item.output}" for item in step_results
             )
-            + "\n\nBunlari tek, net ve kullanici dostu bir final cevapta birlestir."
+            + "\n\nBunları tek, net ve kullanıcı dostu bir final cevapta birleştir."
         )
         response = await self.synthesis_agent.run(summary_prompt)
         self._record_response_usage(response, component="synthesis", default_model_id=self.worker_model_id)
@@ -574,7 +574,7 @@ class MicrosoftAgentOrchestrator:
             return [
                 PlanStep(
                     agent=workflow_context.current_agent,
-                    description=workflow_context.summary or f"{workflow_context.current_agent} adimi surduruluyor",
+                    description=workflow_context.summary or f"{workflow_context.current_agent} adımı sürdürülüyor",
                 )
             ]
 
@@ -671,9 +671,9 @@ class MicrosoftAgentOrchestrator:
             f"AKTIF ADIM\n{step.agent} - {step.description}\n\n"
             "AKTIF WORKFLOW KONTEXTI\n"
             f"{json.dumps(self._serialize_workflow_context(workflow_context), ensure_ascii=False) if workflow_context else 'null'}\n\n"
-            "HAM UZMAN CIKTISI\n"
+            "HAM UZMAN ÇIKTISI\n"
             f"{raw_output}\n\n"
-            "Yukarıdaki ham ciktiyi backend workflow JSON sozlesmesine gore normalize et."
+            "Yukarıdaki ham çıktıyı backend workflow JSON sözleşmesine göre normalize et."
         )
         response = await self.output_structurer_agent.run(prompt)
         self._record_response_usage(
@@ -757,14 +757,14 @@ class MicrosoftAgentOrchestrator:
     def _default_missing_fields_for_step(step: PlanStep) -> list[dict[str, Any]]:
         if step.agent == "Test_Agent":
             return [
-                {"name": "talep_basligi", "label": "Talep Basligi"},
-                {"name": "oncelik", "label": "Oncelik"},
+                {"name": "talep_basligi", "label": "Talep Başlığı"},
+                {"name": "oncelik", "label": "Öncelik"},
                 {"name": "hedef_tarih", "label": "Hedef Tarih"},
             ]
         if step.agent == "IT_Agent":
-            return [{"name": "parca_no", "label": "Parca Numarasi"}]
+            return [{"name": "parca_no", "label": "Parça Numarası"}]
         if step.agent == "HR_Agent":
-            return [{"name": "user_identifier", "label": "E-posta veya Sicil Numarasi"}]
+            return [{"name": "user_identifier", "label": "E-posta veya Sicil Numarası"}]
         return [{"name": "details", "label": "Gerekli Detaylar"}]
 
     @staticmethod
@@ -835,7 +835,7 @@ class MicrosoftAgentOrchestrator:
             content = (item.get("content") or "").strip()
             if content:
                 lines.append(f"{role}: {content}")
-        return "\n".join(lines) if lines else "Bos konusma."
+        return "\n".join(lines) if lines else "Boş konuşma."
 
     @staticmethod
     def _get_last_user_message(history: list[dict[str, str]]) -> str:
@@ -888,7 +888,7 @@ class MicrosoftAgentOrchestrator:
                 steps.append(
                     {
                         "agent": agent_name,
-                        "description": f"{spec.label} adimi calistiriliyor",
+                        "description": f"{spec.label} adımı çalıştırılıyor",
                     }
                 )
         return steps

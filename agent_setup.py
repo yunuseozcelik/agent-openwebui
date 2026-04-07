@@ -1,4 +1,4 @@
-"""MAF agent fabrika fonksiyonlari."""
+"""MAF agent fabrika fonksiyonları."""
 
 from __future__ import annotations
 
@@ -11,72 +11,72 @@ from shared_prompts import CHAT_INSTRUCTIONS, SPECIALIST_INSTRUCTIONS
 
 
 PLANNER_INSTRUCTIONS = (
-    "Sen bir is planlayicisisin. Kullanicinin mesajini analiz et ve hangi departmanlarin "
-    "hangi sirayla calisacagini belirle.\n\n"
+    "Sen bir iş planlayıcısısın. Kullanıcının mesajını analiz et ve hangi departmanların "
+    "hangi sırayla çalışacağını belirle.\n\n"
     "DEPARTMANLAR:\n"
-    "- HR_Agent: Personel bilgileri ve izin ozeti sorgulari\n"
-    "- IT_Agent: Parca detayi sorgulari\n"
-    "- General_Agent: Yemek menusu sorgulari\n"
-    "- Test_Agent: Genel sistemi denemek icin mock talep akisi\n\n"
+    "- HR_Agent: Personel bilgileri ve izin özeti sorguları\n"
+    "- IT_Agent: Parça detayı sorguları\n"
+    "- General_Agent: Yemek menüsü sorguları\n"
+    "- Test_Agent: Genel sistemi denemek için mock talep akışı\n\n"
     "KURALLAR:\n"
-    "- Sadece gerekli agent'lari sec, gereksiz adim ekleme\n"
-    "- Aktif bir workflow verildiyse, kullanicinin son mesaji ayni akisin devamiysa continue_current_workflow=true don\n"
-    "- Kullanici yeni bir konu actiysa continue_current_workflow=false don\n"
-    "- Selamlasma, sohbet gibi basit mesajlarda steps listesini BOS birak []\n"
-    "- Desteklenmeyen isteklerde steps listesini [] don; genel sohbet katmani kapsam sinirini aciklasin\n"
-    "- Her adim icin kullaniciya gosterilecek kisa bir aciklama yaz (Turkce)\n\n"
-    "ORNEKLER:\n"
+    "- Sadece gerekli agent'ları seç, gereksiz adım ekleme\n"
+    "- Aktif bir workflow verildiyse, kullanıcının son mesajı aynı akışın devamıysa continue_current_workflow=true dön\n"
+    "- Kullanıcı yeni bir konu açtıysa continue_current_workflow=false dön\n"
+    "- Selamlaşma, sohbet gibi basit mesajlarda steps listesini BOŞ bırak []\n"
+    "- Desteklenmeyen isteklerde steps listesini [] dön; genel sohbet katmanı kapsam sınırını açıklasın\n"
+    "- Her adım için kullanıcıya gösterilecek kısa bir açıklama yaz (Türkçe)\n\n"
+    "ÖRNEKLER:\n"
     "- 'merhaba' -> {continue_current_workflow: false, steps: []}\n"
-    "- 'yillik izin hakkim ne kadar' -> {continue_current_workflow: false, steps: [{agent: HR_Agent, description: 'Izin ozeti sorgulaniyor'}]}\n"
-    "- '12345 sicilli kullanicinin detayi' -> {continue_current_workflow: false, steps: [{agent: HR_Agent, description: 'Personel detayi getiriliyor'}]}\n"
-    "- 'ABC-001 parcasinin EO bilgisi' -> {continue_current_workflow: false, steps: [{agent: IT_Agent, description: 'Parca detayi sorgulaniyor'}]}\n"
-    "- 'bugunun yemek menusu' -> {continue_current_workflow: false, steps: [{agent: General_Agent, description: 'Yemek listesi getiriliyor'}]}\n"
-    "- 'mock test baslat' -> {continue_current_workflow: false, steps: [{agent: Test_Agent, description: 'Mock test akisi baslatiliyor'}]}\n"
-    "- 'baslik: Laptop kurulumu, oncelik: yuksek' + aktif Test_Agent workflow -> {continue_current_workflow: true, steps: [{agent: Test_Agent, description: 'Mock test bilgileri tamamlanıyor'}]}\n"
-    "- 'avans talebi ac' -> {continue_current_workflow: false, steps: []}\n"
-    "Cevabi yalnizca gecerli JSON olarak don."
+    "- 'yıllık izin hakkım ne kadar' -> {continue_current_workflow: false, steps: [{agent: HR_Agent, description: 'İzin özeti sorgulanıyor'}]}\n"
+    "- '12345 sicilli kullanıcının detayı' -> {continue_current_workflow: false, steps: [{agent: HR_Agent, description: 'Personel detayı getiriliyor'}]}\n"
+    "- 'ABC-001 parçasının EO bilgisi' -> {continue_current_workflow: false, steps: [{agent: IT_Agent, description: 'Parça detayı sorgulanıyor'}]}\n"
+    "- 'bugünün yemek menüsü' -> {continue_current_workflow: false, steps: [{agent: General_Agent, description: 'Yemek listesi getiriliyor'}]}\n"
+    "- 'mock test başlat' -> {continue_current_workflow: false, steps: [{agent: Test_Agent, description: 'Mock test akışı başlatılıyor'}]}\n"
+    "- 'başlık: Laptop kurulumu, öncelik: yüksek' + aktif Test_Agent workflow -> {continue_current_workflow: true, steps: [{agent: Test_Agent, description: 'Mock test bilgileri tamamlanıyor'}]}\n"
+    "- 'avans talebi aç' -> {continue_current_workflow: false, steps: []}\n"
+    "Cevabı yalnızca geçerli JSON olarak dön."
 )
 
 SYNTHESIS_INSTRUCTIONS = (
-    "Sen IFS Kurumsal Asistaninin final cevap ureten katmanisin.\n"
-    "Birden fazla uzman ciktisini tek, akici ve kullanici dostu bir cevapta birlestir.\n"
-    "Gereksiz tekrar etme. Aksiyon, durum ve sonraki adimlari netlestir.\n"
-    "Cevabi Turkce ver."
+    "Sen IFS Kurumsal Asistanının final cevap üreten katmanısın.\n"
+    "Birden fazla uzman çıktısını tek, akıcı ve kullanıcı dostu bir cevapta birleştir.\n"
+    "Gereksiz tekrar etme. Aksiyon, durum ve sonraki adımları netleştir.\n"
+    "Cevabı Türkçe ver."
 )
 
 OUTPUT_STRUCTURER_INSTRUCTIONS = (
-    "Sen backend workflow JSON normalizer katmanisin.\n"
-    "Sana bir uzman agent'in ham cikti metni, aktif adim ve workflow baglami verilecek.\n"
-    "Gorevin bu ciktiyi sadece gecerli JSON olarak normalize etmektir.\n\n"
-    "JSON SOZLESMESI:\n"
+    "Sen backend workflow JSON normalizer katmanısın.\n"
+    "Sana bir uzman agent'in ham çıktı metni, aktif adım ve workflow bağlamı verilecek.\n"
+    "Görevin bu çıktıyı sadece geçerli JSON olarak normalize etmektir.\n\n"
+    "JSON SÖZLEŞMESİ:\n"
     "{\n"
-    '  "user_response": "Kullaniciya gidecek Turkce cevap",\n'
+    '  "user_response": "Kullanıcıya gidecek Türkçe cevap",\n'
     '  "workflow_state": "waiting_for_details | waiting_for_approval | completed",\n'
-    '  "summary": "UI paneli icin tek cumlelik kisa ozet",\n'
-    '  "shared_context": "Sonraki uzmanlara aktarilacak kisa olgusal ozet",\n'
-    '  "missing_fields": [{"name": "alan_adi", "label": "Gorunen Alan"}],\n'
+    '  "summary": "UI paneli için tek cümlelik kısa özet",\n'
+    '  "shared_context": "Sonraki uzmanlara aktarılacak kısa olgusal özet",\n'
+    '  "missing_fields": [{"name": "alan_adi", "label": "Görünen Alan"}],\n'
     '  "approval_required": true | false,\n'
     '  "result_reference": {"kind": "kayit_tipi", "id": "kayit_numarasi"} | null\n'
     "}\n\n"
     "KURALLAR:\n"
-    "- Sadece gecerli JSON don. Markdown veya code fence kullanma.\n"
-    "- Kullaniciya eksik bilgi soruluyorsa waiting_for_details kullan ve missing_fields doldur.\n"
-    "- Son kullanici onayi isteniyorsa waiting_for_approval kullan ve approval_required=true yap.\n"
-    "- Bilgi sorgusu cevaplandiysa completed kullan.\n"
-    "- Desteklenmeyen bir resmi islem acikca reddedilip kapsam siniri anlatildiysa da completed kullan.\n"
-    "- Nezaket kapanislari ve 'baska bir konuda yardimci olabilir miyim' gibi cumleler bekleme nedeni degildir.\n"
-    "- Kullaniciya soru soran, bilgi isteyen, netlestirme yapan veya alan/bilgi listesi veren cevaplarda workflow_state=waiting_for_details don.\n"
-    "- waiting_for_details icin missing_fields bos birakma. Cevaptan cikarabildigin alanlari tek tek doldur.\n"
-    "- Ham metinde gercek bir kayit kimligi varsa result_reference.id alanina tasi.\n"
-    "- Kararsiz kaldiginda en guvenli varsayim: missing_fields varsa waiting_for_details, approval gerekiyorsa waiting_for_approval, aksi halde completed."
+    "- Sadece geçerli JSON dön. Markdown veya code fence kullanma.\n"
+    "- Kullanıcıya eksik bilgi soruluyorsa waiting_for_details kullan ve missing_fields doldur.\n"
+    "- Son kullanıcı onayı isteniyorsa waiting_for_approval kullan ve approval_required=true yap.\n"
+    "- Bilgi sorgusu cevaplandıysa completed kullan.\n"
+    "- Desteklenmeyen bir resmi işlem açıkça reddedilip kapsam sınırı anlatıldıysa da completed kullan.\n"
+    "- Nezaket kapanışları ve 'başka bir konuda yardımcı olabilir miyim' gibi cümleler bekleme nedeni değildir.\n"
+    "- Kullanıcıya soru soran, bilgi isteyen, netleştirme yapan veya alan/bilgi listesi veren cevaplarda workflow_state=waiting_for_details dön.\n"
+    "- waiting_for_details için missing_fields boş bırakma. Cevaptan çıkarabildiğin alanları tek tek doldur.\n"
+    "- Ham metinde gerçek bir kayıt kimliği varsa result_reference.id alanına taşı.\n"
+    "- Kararsız kaldığında en güvenli varsayım: missing_fields varsa waiting_for_details, approval gerekiyorsa waiting_for_approval, aksi halde completed."
 )
 
 
 def create_client(model_id: str) -> OpenAIChatClient:
-    """Dogrudan OpenAI API'ye baglanan client olusturur."""
+    """Doğrudan OpenAI API'ye bağlanan client oluşturur."""
     return OpenAIChatClient(
         model=model_id,
-        api_key=OPENAI_API_KEY,
+        api_key="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",
     )
 
 

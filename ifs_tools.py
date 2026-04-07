@@ -30,17 +30,17 @@ def _normalize_user_email(user_email: str) -> str:
         return email
     if MOCK_MODE:
         return MOCK_USER_EMAIL
-    raise ValueError("Kullanici e-postasi gerekli.")
+    raise ValueError("Kullanıcı e-postası gerekli.")
 
 
 def _normalize_badgeno(badgeno: str) -> str:
     value = (badgeno or "").strip()
     if not value:
-        raise ValueError("Sicil numarasi gerekli.")
+        raise ValueError("Sicil numarası gerekli.")
     if len(value) == 4:
         return f"0{value}"
     if len(value) != 5:
-        raise ValueError("Sicil numarasi 4 veya 5 haneli olmalidir.")
+        raise ValueError("Sicil numarası 4 veya 5 haneli olmalıdır.")
     return value
 
 
@@ -123,9 +123,9 @@ def _normalize_meal_records(records: list[dict[str, Any]]) -> list[dict[str, Any
 
 @tool(approval_mode="never_require")
 async def get_user_information(
-    user_email: Annotated[str, Field(description="Calisan e-posta adresi. Bos ise oturum kullanicisi tercih edilir.")] = "",
+    user_email: Annotated[str, Field(description="Çalışan e-posta adresi. Boş ise oturum kullanıcısı tercih edilir.")] = "",
 ) -> str:
-    """IFS sisteminden temel kullanici bilgilerini getirir."""
+    """IFS sisteminden temel kullanıcı bilgilerini getirir."""
     try:
         email = _normalize_user_email(user_email)
         records = await get_user_by_email(email)
@@ -136,10 +136,10 @@ async def get_user_information(
 
 @tool(approval_mode="never_require")
 async def get_user_detail_by_badgeno(
-    badgeno: Annotated[str, Field(description="Sicil numarasi. 4 veya 5 haneli olabilir.")] = "",
-    user_email: Annotated[str, Field(description="Sicil numarasi bilinmiyorsa kullanici e-postasi.")] = "",
+    badgeno: Annotated[str, Field(description="Sicil numarası. 4 veya 5 haneli olabilir.")] = "",
+    user_email: Annotated[str, Field(description="Sicil numarası bilinmiyorsa kullanıcı e-postası.")] = "",
 ) -> str:
-    """IFS sisteminden kullanici detay ve izin ozet bilgilerini getirir."""
+    """IFS sisteminden kullanıcı detay ve izin özet bilgilerini getirir."""
     try:
         resolved_badgeno = (badgeno or "").strip()
         if not resolved_badgeno:
@@ -153,13 +153,13 @@ async def get_user_detail_by_badgeno(
 
 @tool(approval_mode="never_require")
 async def get_part_detail_by_parcano(
-    parcano: Annotated[str, Field(description="IFS parca numarasi.")],
+    parcano: Annotated[str, Field(description="IFS parça numarası.")],
 ) -> str:
-    """IFS sisteminden parca detay bilgilerini getirir."""
+    """IFS sisteminden parça detay bilgilerini getirir."""
     try:
         value = (parcano or "").strip()
         if not value:
-            raise ValueError("Parca numarasi gerekli.")
+            raise ValueError("Parça numarası gerekli.")
         records = await get_part_detail(value)
         return json.dumps(_normalize_part_records(records), ensure_ascii=False)
     except Exception as exc:
@@ -168,7 +168,7 @@ async def get_part_detail_by_parcano(
 
 @tool(approval_mode="never_require")
 async def get_meal_or_yemek_list(
-    date: Annotated[str, Field(description="today veya DD.MM.YYYY formatinda tarih.")] = "today",
+    date: Annotated[str, Field(description="today veya DD.MM.YYYY formatında tarih.")] = "today",
 ) -> str:
     """IFS sisteminden yemek listesini getirir."""
     try:
