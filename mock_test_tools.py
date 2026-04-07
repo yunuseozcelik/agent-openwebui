@@ -12,8 +12,8 @@ from pydantic import Field
 
 @tool(approval_mode="never_require")
 def create_mock_test_request(
-    title: Annotated[str, Field(description="Talep basligi")],
-    priority: Annotated[str, Field(description="Oncelik: dusuk, orta veya yuksek")],
+    title: Annotated[str, Field(description="Talep başlığı")],
+    priority: Annotated[str, Field(description="Öncelik: düşük, orta veya yüksek")],
     target_date: Annotated[str, Field(description="Hedef tarih")],
     note: Annotated[str, Field(description="Opsiyonel not")] = "",
 ) -> str:
@@ -26,7 +26,7 @@ def create_mock_test_request(
         "priority": priority,
         "target_date": target_date,
         "note": note,
-        "message": f"Mock test kaydi olusturuldu. Numara: {request_id}",
+        "message": f"Mock test kaydı oluşturuldu. Numara: {request_id}",
     }
     return json.dumps(payload, ensure_ascii=False)
 

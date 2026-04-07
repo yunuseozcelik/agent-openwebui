@@ -438,21 +438,22 @@ class MicrosoftAgentOrchestrator:
             "- Sadece kendi uzmanlık alanını ele al.\n"
             "- Kullanıcıya ait veri gerekiyorsa user_email bilgisini kullan.\n"
             "- Yalnızca desteklenen IFS sorguları için gerekli tool'ları çağır.\n"
-            f"- Alan özel kuralları: {domain_spec.execution_guidance}\n"
-            "- waiting_for_details: Yalnızca desteklenen sorgu için eksik veri istiyorsan kullan.\n"
-            "- waiting_for_approval: Yalnızca gerçekten son kullanıcı onayı gerektiren desteklenen akışta kullan.\n"
-            "- completed: Bilgi cevabı verdiğin, sorguyu tamamladığın veya desteklenmeyen isteğin kapsam dışı olduğunu net açıkladığın durumlarda kullan.\n"
+            f"- Alan özel kuralları: {domain_spec.execution_guidance}\n\n"
+            "STATE KURALLARI:\n"
+            "- waiting_for_details: Eksik bilgi istiyorsan kullan. missing_fields DOLU olmalı.\n"
+            "- waiting_for_approval: Tüm bilgiler tamam, kullanıcıya 'Oluşturulsun mu?' diye soruyorsan kullan. approval_required=true olmalı.\n"
+            "- completed: Sorgu cevaplandı, tool çağrılıp sonuç alındı, istek reddedildi veya kullanıcı onay/iptal verdi.\n\n"
+            "ONAY ALGILAMA (KRİTİK):\n"
+            "- Aktif workflow state=waiting_for_approval iken kullanıcı 'evet/onaylıyorum/onayla/yap/tamam/oluştur' diyorsa: ilgili tool'u çağır ve workflow_state=completed dön.\n"
+            "- Aktif workflow state=waiting_for_approval iken kullanıcı 'hayır/iptal/vazgeçtim' diyorsa: workflow_state=completed dön, tool çağırma.\n"
+            "- Onay alındıktan sonra ASLA tekrar waiting_for_approval dönme.\n"
+            "- 'Onay süreci gerekmektedir' gibi belirsiz ifadeler KULLANMA.\n\n"
+            "DİĞER KURALLAR:\n"
             "- Resmi talep, ticket, avans, bordro veya servis bilgisi oluşturabileceğini iddia etme.\n"
-            "- Kullanıcıya soru soruyorsan, netleştirme istiyorsan veya bilgi listesi istiyorsan completed deme.\n"
-            "- waiting_for_details kullanıyorsan eksik alanları tahmin etme; gerçekten hangi alanları bekliyorsan tek tek yaz.\n"
-            "- Kullanıcıdan sadece tek bir detay bekliyorsan bile missing_fields listesine onu ekle.\n"
-            "- Yanıtının sonunda yalnızca nezaket veya kapanış sorusu varsa bu workflow_state'i waiting yapmaz; asıl işlem sonucuna göre karar ver.\n"
+            "- Nezaket kapanışları workflow state'i değiştirmez.\n"
             "- missing_fields yalnızca waiting_for_details durumunda doldur.\n"
             "- approval_required yalnızca waiting_for_approval durumunda true olsun.\n"
-            "- Gerçek bir sistem kayıt kimliği yoksa result_reference alanını null bırak.\n"
-            "- waiting_for_details kullanıyorsan missing_fields boş olamaz.\n"
-            "- waiting_for_approval kullanıyorsan approval_required=true olmalıdır.\n"
-            "- Aktif workflow varsa ve kullanıcının son mesajı o akışı tamamlıyorsa aynı akışı devam ettir, baştan başlama.\n"
+            "- Gerçek bir kayıt kimliği yoksa result_reference null bırak.\n"
             "- Yalnızca geçerli JSON dön. Markdown veya code fence kullanma."
             f"{email_line}"
         )
@@ -693,21 +694,32 @@ class MicrosoftAgentOrchestrator:
         result_reference: dict[str, Any] | None,
         workflow_context: WorkflowContext | None = None,
     ) -> WorkflowState:
+        # 1. Kayıt ID'si varsa kesinlikle tamamlandı
         if result_reference and result_reference.get("id"):
             return "completed"
 
+        # 2. Agent açıkça completed dönmüşse, eski workflow state'e bakmadan tamamla
+        if requested_state == "completed":
+            return "completed"
+
+        # 3. Onay gerekiyorsa (ve agent completed demiyorsa)
         if approval_required:
             return "waiting_for_approval"
 
+        # 4. Eksik alan varsa
         if missing_fields:
             return "waiting_for_details"
 
+        # 5. Agent geçerli bir state döndüyse kullan
         if requested_state in SPECIALIST_WORKFLOW_STATES:
             return requested_state
 
-        if workflow_context and workflow_context.state in {"waiting_for_details", "waiting_for_approval"}:
-            return workflow_context.state
+        # 6. Hiçbir sinyal yoksa ve önceki state waiting ise,
+        #    sadece waiting_for_details'da kal (onay beklerken değil)
+        if workflow_context and workflow_context.state == "waiting_for_details":
+            return "waiting_for_details"
 
+        # 7. Varsayılan: tamamlandı
         return "completed"
 
     @staticmethod

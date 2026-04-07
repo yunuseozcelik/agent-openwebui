@@ -34,12 +34,12 @@ app.add_middleware(
 
 MODEL_ID = "ifs-microsoft-agent"
 
-# MAF Orchestrator baslatma
+# MAF Orchestrator başlatma
 try:
     maf_orchestrator = MicrosoftAgentOrchestrator()
-    print("[OK] Microsoft Agent Framework orchestrator hazir.")
+    print("[OK] Microsoft Agent Framework orchestrator hazır.")
 except Exception as exc:
-    logger.exception("Microsoft Agent Framework yuklenirken hata olustu: %s", exc)
+    logger.exception("Microsoft Agent Framework yüklenirken hata oluştu: %s", exc)
     maf_orchestrator = None
 
 
@@ -155,13 +155,13 @@ def _ensure_agent_access(user_ctx: dict[str, str | None]) -> None:
     if not user_email:
         raise HTTPException(
             status_code=403,
-            detail="FNSS Agent kullanimi icin oturum e-posta bilginiz bulunamadi.",
+            detail="FNSS Agent kullanımı için oturum e-posta bilginiz bulunamadı.",
         )
 
     if user_email not in allowed_emails:
         raise HTTPException(
             status_code=403,
-            detail="Bu hesap FNSS Agent ozelligi icin yetkili degil.",
+            detail="Bu hesap FNSS Agent özelliği için yetkili değil.",
         )
 
 
@@ -178,17 +178,17 @@ def _workflow_state_to_waiting_label(state: str | None) -> str:
         return "Onay Bekleniyor"
     if state == "waiting_for_details":
         return "Bilgi Bekleniyor"
-    return "Yanit Bekliyor"
+    return "Yanıt Bekliyor"
 
 
 def _workflow_state_to_status_text(state: str | None) -> str:
     if state == "waiting_for_approval":
-        return "Onayiniz bekleniyor"
+        return "Onayınız bekleniyor"
     if state == "waiting_for_details":
         return "Eksik bilgiler bekleniyor"
     if state == "active":
-        return "Islem devam ediyor"
-    return "Surec tamamlandi"
+        return "İşlem devam ediyor"
+    return "Süreç tamamlandı"
 
 
 def _serialize_workflow_status(workflow_context: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -288,7 +288,7 @@ def _make_workflow_chunk(completion_id, created, model, workflow_status: dict[st
 async def stream_maf(request: ChatCompletionRequest, completion_id: str, created: int):
     """Stream MAF events as SSE chunks with agent status updates."""
     if not maf_orchestrator:
-        raise HTTPException(status_code=500, detail="Microsoft Agent Framework yuklenemedi.")
+        raise HTTPException(status_code=500, detail="Microsoft Agent Framework yüklenemedi.")
 
     user_ctx = _extract_request_context(request.messages)
     _ensure_agent_access(user_ctx)
@@ -300,7 +300,7 @@ async def stream_maf(request: ChatCompletionRequest, completion_id: str, created
         request.model,
         "Planner",
         "analyzing",
-        "Plan hazirlaniyor...",
+        "Plan hazırlanıyor...",
     )
     yield f"data: {json.dumps(initial_status_chunk)}\n\n"
 
@@ -402,7 +402,7 @@ async def stream_maf(request: ChatCompletionRequest, completion_id: str, created
                 request.model,
                 "Sentez",
                 "working",
-                "Yanit hazirlaniyor...",
+                "Yanıt hazırlanıyor...",
             )
             yield f"data: {json.dumps(chat_output_chunk)}\n\n"
 
@@ -411,7 +411,7 @@ async def stream_maf(request: ChatCompletionRequest, completion_id: str, created
     final_content = ""
     final_workflow_status = None
     if "error" in error_holder:
-        final_content = f"Bir hata olustu: {error_holder['error']}"
+        final_content = f"Bir hata oluştu: {error_holder['error']}"
     elif "result" in result_holder:
         final_result = result_holder["result"]
         final_content = final_result.final_text
@@ -443,7 +443,7 @@ async def chat_completions(request: ChatCompletionRequest):
 
         if not request.stream:
             if not maf_orchestrator:
-                raise HTTPException(status_code=500, detail="MAF yuklenemedi.")
+                raise HTTPException(status_code=500, detail="MAF yüklenemedi.")
             user_ctx = _extract_request_context(request.messages)
             _ensure_agent_access(user_ctx)
             history = to_agent_history(request.messages)
@@ -473,8 +473,8 @@ async def chat_completions(request: ChatCompletionRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("Beklenmeyen backend hatasi: %s", exc)
-        raise HTTPException(status_code=500, detail="Beklenmeyen bir sunucu hatasi olustu.")
+        logger.exception("Beklenmeyen backend hatası: %s", exc)
+        raise HTTPException(status_code=500, detail="Beklenmeyen bir sunucu hatası oluştu.")
 
 
 if __name__ == "__main__":
