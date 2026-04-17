@@ -1,0 +1,97 @@
+/* ═══════════════════════════════════════════════
+   Agent Factory — Product Theme
+   ═══════════════════════════════════════════════ */
+
+:root {
+  --af-primary: #6366f1;
+  --af-primary-light: #818cf8;
+  --af-accent: #f43f5e;
+  --af-success: #10b981;
+  --af-warning: #f59e0b;
+  --af-border: #334155;
+  --af-text: #e2e8f0;
+  --af-text-muted: #94a3b8;
+}
+
+/* --- Tables --- */
+.message-content table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--af-border);
+  margin: 12px 0;
+  font-size: 0.9em;
+}
+
+.message-content table th,
+.message-content table td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--af-border);
+}
+
+.message-content table th {
+  font-weight: 600;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--af-text-muted);
+}
+
+.message-content table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- Action buttons polish --- */
+button[id*="action"] {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  padding: 10px 22px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* --- Code blocks --- */
+.message-content pre {
+  border-radius: 10px;
+  border: 1px solid var(--af-border);
+}
+
+.message-content code {
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 0.88em;
+}
+
+/* --- Smooth message animation --- */
+.message-content {
+  animation: fadeSlideIn 0.25s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Plotly chart --- */
+.message-content .plotly-graph-div {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--af-border);
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--af-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--af-text-muted); }
+
+/* --- Blockquote styling --- */
+.message-content blockquote {
+  border-left: 3px solid var(--af-primary);
+  padding-left: 12px;
+  margin-left: 0;
+  color: var(--af-text-muted);
+  font-style: italic;
+}

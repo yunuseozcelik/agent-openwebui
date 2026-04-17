@@ -8,13 +8,23 @@ AGENT_DIR = Path("generated/agents")
 AGENT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def scaffold_prompt_agent(spec: AgentSpec) -> dict:
-    """AgentSpec'ten Foundry create_agent API'si icin definition uret."""
+def scaffold_prompt_agent(
+    spec: AgentSpec,
+    wizard_answers: dict | None = None,
+    custom_instructions: str | None = None,
+) -> dict:
+    """AgentSpec'ten Foundry create_agent API'si icin definition uret.
+
+    custom_instructions: LLM tarafindan olusturulmus zengin prompt (varsa).
+    Yoksa template-based fallback kullanilir.
+    """
+    instructions = custom_instructions or generate_instructions(spec, wizard_answers)
+
     definition = {
         "spec_id": spec.id,
         "name": spec.name,
         "model": OPENAI_WORKER_MODEL,
-        "instructions": generate_instructions(spec),
+        "instructions": instructions,
         "tools": map_tools_to_foundry(spec),
         "metadata": {
             "generated_by": "agent-factory",

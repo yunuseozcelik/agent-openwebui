@@ -28,10 +28,13 @@ class PipelineResult:
     definition: dict = field(default_factory=dict)
 
 
-def run_pipeline(spec_id: str) -> PipelineResult:
+def run_pipeline(
+    spec_id: str,
+    wizard_answers: dict | None = None,
+    custom_instructions: str | None = None,
+) -> PipelineResult:
     """
     Policy -> Architect -> Scaffold -> Review
-    Tum pipeline'i calistirir.
     """
     spec = load_spec(spec_id)
     stages: list[PipelineStage] = []
@@ -61,9 +64,12 @@ def run_pipeline(spec_id: str) -> PipelineResult:
         data=asdict(decision),
     ))
 
-    # 3. Scaffold — MVP'de her tip prompt agent olarak deploy edilir.
-    # Architect karari bilgilendirme amacli, ileride tip bazli scaffolding eklenecek.
-    definition = scaffold_prompt_agent(spec)
+    # 3. Scaffold
+    definition = scaffold_prompt_agent(
+        spec,
+        wizard_answers=wizard_answers,
+        custom_instructions=custom_instructions,
+    )
     if decision.selected_type.value != "prompt":
         definition["metadata"]["ideal_type"] = decision.selected_type.value
         definition["metadata"]["ideal_type_reason"] = decision.reason

@@ -22,12 +22,12 @@ class WizardStep:
     title: str
     description: str
     choices: list[WizardChoice] = field(default_factory=list)
-    allow_custom: bool = False  # Serbest metin de girebilir mi
+    allow_custom: bool = False
     required: bool = True
 
 
-# Wizard adimlari
 WIZARD_STEPS: list[WizardStep] = [
+    # 1. Hedef kitle
     WizardStep(
         id="audience",
         title="Kimler kullanacak?",
@@ -43,6 +43,35 @@ WIZARD_STEPS: list[WizardStep] = [
         ],
         allow_custom=True,
     ),
+
+    # 2. Iletisim tonu
+    WizardStep(
+        id="tone",
+        title="Agent nasil konussun?",
+        description="Agent'in iletisim tarzini secin.",
+        choices=[
+            WizardChoice("Resmi / Kurumsal", "formal", "Profesyonel dil, kisa ve net cevaplar"),
+            WizardChoice("Samimi / Yardimci", "friendly", "Sicak, anlasılır, rehberlik eden"),
+            WizardChoice("Teknik / Detayli", "technical", "Uzman seviyesi, detayli aciklamalar"),
+            WizardChoice("Kisa / Ozet Odakli", "concise", "Minimum kelime, maksimum bilgi"),
+        ],
+    ),
+
+    # 3. Cikti formati
+    WizardStep(
+        id="output_format",
+        title="Ciktilari nasil versin?",
+        description="Agent'in cevaplarini hangi formatta sunmasini istiyorsunuz?",
+        choices=[
+            WizardChoice("Tablo / Yapilandirilmis", "structured", "Tablolar, listeler, maddeler halinde"),
+            WizardChoice("Rapor / Detayli Metin", "report", "Uzun, aciklayici paragraflar"),
+            WizardChoice("Kisa Ozet", "summary", "2-3 cumlelik ozetler"),
+            WizardChoice("Adim Adim Rehber", "step_by_step", "Numaralandirilmis adimlar halinde"),
+            WizardChoice("Karisik / Duruma Gore", "adaptive", "Soruya gore uygun format"),
+        ],
+    ),
+
+    # 4. Hassas veri
     WizardStep(
         id="pii",
         title="Hassas veri iceriyor mu?",
@@ -53,6 +82,8 @@ WIZARD_STEPS: list[WizardStep] = [
             WizardChoice("Emin degilim", "maybe", "Sistem otomatik belirlesin"),
         ],
     ),
+
+    # 5. Insan onayi
     WizardStep(
         id="approval",
         title="Insan onayi gerekli mi?",
@@ -63,6 +94,35 @@ WIZARD_STEPS: list[WizardStep] = [
             WizardChoice("Bazen gerekebilir", "conditional", "Bazi durumlarda onay gerekli"),
         ],
     ),
+
+    # 6. Kapsam siniri
+    WizardStep(
+        id="scope",
+        title="Agent ne YAPMAMALI?",
+        description="Agent'in kesinlikle yapmaması gereken seyler neler? (Kapsam disi davranislar)",
+        choices=[
+            WizardChoice("Finansal tavsiye vermemeli", "no_financial_advice", "Yatirim, kredi, mali karar onerisi yasak"),
+            WizardChoice("Kisisel bilgi paylasmamalı", "no_pii_sharing", "Kisisel veri disari cikmamali"),
+            WizardChoice("Aksiyon almamali, sadece raporlamali", "report_only", "Hicbir sisteme yazma/degistirme yapmasin"),
+            WizardChoice("Kapsam disi sorulara cevap vermemeli", "strict_scope", "Sadece gorevi dahilinde calissin"),
+            WizardChoice("Ozel bir kisitlama yok", "no_restriction", "Genel kurallar yeterli"),
+        ],
+        allow_custom=True,
+    ),
+
+    # 7. Ornek senaryo
+    WizardStep(
+        id="example_scenario",
+        title="Ornek bir kullanim senaryosu",
+        description=(
+            "Agent'in tipik bir kullanim senaryosunu yazin. "
+            "Ornegin: 'Kullanici Excel yukler, agent hata kodlarini bulur ve rapor cikartir.'"
+        ),
+        choices=[
+            WizardChoice("Simdilik gecmek istiyorum", "skip", "Ornek senaryo vermeden devam et"),
+        ],
+        allow_custom=True,
+    ),
 ]
 
 
@@ -70,10 +130,10 @@ WIZARD_STEPS: list[WizardStep] = [
 class WizardState:
     """Wizard'in o anki durumu."""
     current_step: int = 0  # -1 = initial desc bekleniyor, 0+ = adim indeksi
-    description: str = ""  # Kullanicinin ilk tanimi
-    answers: dict = field(default_factory=dict)  # step_id -> answer value
-    agent_name: str = ""  # LLM'in urettigi isim
-    agent_purpose: str = ""  # LLM'in urettigi amac
+    description: str = ""
+    answers: dict = field(default_factory=dict)
+    agent_name: str = ""
+    agent_purpose: str = ""
     completed: bool = False
 
     @property
