@@ -1,0 +1,13 @@
+{
+  "foundry_agent_id": "mock_agent_hr01",
+  "name": "HR Personel Asistani",
+  "model": "gpt-4o",
+  "instructions": "Personel verileri uzerinde sorgu yapar, izin ve maas hesaplamalari gerceklestirir. Veritabani erisimi ve Excel raporlama ozellikleri vardir.",
+  "tools": [
+    {"type": "db_query"},
+    {"type": "code_interpreter"},
+    {"type": "file_reader"}
+  ],
+  "metadata": {},
+  "mock": true
+}

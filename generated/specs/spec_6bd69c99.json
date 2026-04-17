@@ -1,0 +1,32 @@
+{
+  "id": "spec_6bd69c99",
+  "version": 1,
+  "created_at": "2026-04-17T13:46:03.821655",
+  "name": "Müşteri Şikâyet Analiz Aracı",
+  "purpose": "Müşteri şikâyetlerini Excel dosyasından okuyarak kategorilendirir ve yönetim için haftalık trend raporları oluşturur.",
+  "user_audience": "yonetim",
+  "data_sources": [
+    "Excel Dosyası"
+  ],
+  "tools": [
+    {
+      "name": "file_reader",
+      "type": "file_reader",
+      "description": "file_reader aracı",
+      "config": {}
+    },
+    {
+      "name": "code_interpreter",
+      "type": "code_interpreter",
+      "description": "code_interpreter aracı",
+      "config": {}
+    }
+  ],
+  "risk_level": "medium",
+  "approval_required": false,
+  "contains_pii": true,
+  "needs_supervisor": false,
+  "custom_state_required": false,
+  "decision_points": 0,
+  "suggested_type": null
+}

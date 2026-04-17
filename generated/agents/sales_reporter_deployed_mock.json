@@ -1,0 +1,13 @@
+{
+  "foundry_agent_id": "mock_agent_sales01",
+  "name": "Satis Rapor Asistani",
+  "model": "gpt-4o",
+  "instructions": "Haftalik ve aylik satis verilerini analiz eder, rapor olusturur. Veritabani sorgulari yapabilir ve API entegrasyonu ile CRM verisi cekebilir.",
+  "tools": [
+    {"type": "code_interpreter"},
+    {"type": "db_query"},
+    {"type": "api_call"}
+  ],
+  "metadata": {},
+  "mock": true
+}

@@ -1,0 +1,13 @@
+{
+  "foundry_agent_id": "mock_agent_docs01",
+  "name": "Dokuman Arama Motoru",
+  "model": "gpt-4o-mini",
+  "instructions": "Sirket ici dokumantasyon ve PDF arsivinde arama yapar. Bilgi tabani sorgulama ve API ile dis kaynaklardan veri cekebilir.",
+  "tools": [
+    {"type": "file_search"},
+    {"type": "file_reader"},
+    {"type": "api_call"}
+  ],
+  "metadata": {},
+  "mock": true
+}

@@ -6,7 +6,4 @@ venv/
 .venv/
 .vscode/
 .idea/
-ifs_servis.txt
 .claude
-generated/
-data/

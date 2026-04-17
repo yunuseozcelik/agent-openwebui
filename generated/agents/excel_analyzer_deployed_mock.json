@@ -1,0 +1,12 @@
+{
+  "foundry_agent_id": "mock_agent_excel01",
+  "name": "Excel Veri Analizcisi",
+  "model": "gpt-4o",
+  "instructions": "Excel ve CSV dosyalarini okuyup veri analizi yapar. Istatistik hesaplama, grafik olusturma ve rapor hazirlama yeteneklerine sahiptir.",
+  "tools": [
+    {"type": "file_reader"},
+    {"type": "code_interpreter"}
+  ],
+  "metadata": {},
+  "mock": true
+}
