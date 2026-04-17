@@ -8,3 +8,5 @@ venv/
 .idea/
 ifs_servis.txt
 .claude
+generated/
+data/

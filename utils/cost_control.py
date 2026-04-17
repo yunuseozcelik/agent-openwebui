@@ -8,8 +8,6 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from langchain_core.callbacks import BaseCallbackHandler
-
 from .portkey import get_gateway_status
 
 
@@ -223,43 +221,6 @@ class CostTracker:
         with self._lock:
             self._state = _default_state()
             self._save()
-
-
-class LangChainCostCallbackHandler(BaseCallbackHandler):
-    def __init__(self, *, engine: str, component: str, tracker: CostTracker) -> None:
-        super().__init__()
-        self.engine = engine
-        self.component = component
-        self.tracker = tracker
-
-    def on_llm_end(self, response, **kwargs: Any) -> None:  # type: ignore[override]
-        llm_output = getattr(response, "llm_output", {}) or {}
-        usage = llm_output.get("token_usage") or {}
-        model_id = llm_output.get("model_name") or "unknown"
-
-        if not usage and getattr(response, "generations", None):
-            try:
-                generation = response.generations[0][0]
-                usage = getattr(generation.message, "usage_metadata", {}) or {}
-                model_id = getattr(generation.message, "response_metadata", {}).get("model_name", model_id)
-            except Exception:
-                usage = {}
-
-        input_tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
-        output_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
-        total_tokens = int(usage.get("total_tokens") or usage.get("total_token_count") or (input_tokens + output_tokens))
-
-        if input_tokens == 0 and output_tokens == 0 and total_tokens == 0:
-            return
-
-        self.tracker.record_llm_call(
-            engine=self.engine,
-            component=self.component,
-            model_id=model_id,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-        )
 
 
 cost_tracker = CostTracker()

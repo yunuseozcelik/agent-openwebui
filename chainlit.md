@@ -1,14 +1,16 @@
-# Welcome to Chainlit! 🚀🤖
+# Agent Factory Builder
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+Dogal dille AI agent olusturun, otomatik pipeline ile validate edin ve deploy edin.
 
-## Useful Links 🔗
+## Nasil Kullanilir
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
+1. Olusturmak istediginiz agent'i dogal dille anlatin
+2. Builder Copilot size sorular soracak
+3. Spec tamamlandiginda pipeline otomatik calisir (Policy - Architect - Scaffold - Review)
+4. Onay verdikten sonra agent deploy edilir
 
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
+## Ornek Senaryolar
 
-## Welcome screen
-
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
+- "Excel dosyalarindaki hata kodlarini analiz eden bir agent istiyorum"
+- "Musteri PII bilgilerini sorgulayan bir agent lazim"
+- "Haftalik raporlari ozetleyen bir agent olustur"

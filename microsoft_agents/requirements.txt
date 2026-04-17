@@ -1,4 +1,0 @@
-agent-framework[openai] --pre
-chainlit
-python-dotenv
-requests

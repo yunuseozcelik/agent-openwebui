@@ -71,23 +71,6 @@ def get_client_api_key(primary_api_key: str | None) -> str | None:
     return primary_api_key or PORTKEY_CLIENT_API_KEY
 
 
-def get_langchain_client_options(
-    *,
-    model_id: str,
-    primary_api_key: str | None,
-    engine: str,
-    component: str,
-) -> dict[str, Any]:
-    options: dict[str, Any] = {
-        "model": resolve_model_name(model_id),
-        "api_key": get_client_api_key(primary_api_key),
-    }
-    if is_gateway_enabled():
-        options["base_url"] = PORTKEY_BASE_URL
-        options["default_headers"] = build_gateway_headers(engine=engine, component=component)
-    return options
-
-
 def get_maf_client_options(
     *,
     model_id: str,
@@ -96,7 +79,7 @@ def get_maf_client_options(
     component: str,
 ) -> dict[str, Any]:
     options: dict[str, Any] = {
-        "model_id": resolve_model_name(model_id),
+        "model": resolve_model_name(model_id),
         "api_key": get_client_api_key(primary_api_key),
     }
     if is_gateway_enabled():

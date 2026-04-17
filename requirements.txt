@@ -1,10 +1,7 @@
-langchain-core
-langchain-openai
-langgraph
 agent-framework[openai] --pre
 chainlit
-fastapi
-uvicorn
-pydantic
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
 python-dotenv
 requests
+plotly
