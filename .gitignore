@@ -7,3 +7,9 @@ venv/
 .vscode/
 .idea/
 .claude
+
+# Frontend
+web/node_modules/
+web/dist/
+web/dist-tsnode/
+web/*.tsbuildinfo

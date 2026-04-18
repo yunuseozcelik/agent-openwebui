@@ -1,0 +1,29 @@
+.cmdk-group [cmdk-group-heading] {
+  padding: 8px 12px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(var(--muted-foreground));
+}
+
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  transition: background 120ms ease;
+}
+
+.cmdk-item[data-selected="true"] {
+  background: hsl(var(--accent) / 0.12);
+}
+
+.cmdk-item[data-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+}

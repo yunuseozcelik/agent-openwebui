@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 224 71% 4%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+
+    --primary: 243 75% 59%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 224 71% 14%;
+
+    --accent: 346 77% 49%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 210 40% 98%;
+
+    --ring: 243 75% 59%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 224 47% 7%;
+    --foreground: 210 40% 98%;
+
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 65%;
+
+    --card: 224 45% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 224 45% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+
+    --primary: 239 85% 67%;
+    --primary-foreground: 224 47% 7%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 346 85% 60%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 160 64% 45%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 210 40% 98%;
+
+    --ring: 239 85% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-image:
+      radial-gradient(circle at 10% 0%, hsl(var(--primary) / 0.08), transparent 40%),
+      radial-gradient(circle at 90% 100%, hsl(var(--accent) / 0.08), transparent 40%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    @apply bg-primary/30 text-foreground;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent;
+    background-size: 200% 200%;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 400px 100%;
+    @apply animate-shimmer;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  .ring-glow {
+    box-shadow:
+      0 0 0 1px hsl(var(--primary) / 0.3),
+      0 0 24px hsl(var(--primary) / 0.15);
+  }
+}
+
+/* Markdown prose */
+.prose-custom {
+  @apply text-foreground/90 leading-relaxed;
+}
+.prose-custom h1,
+.prose-custom h2,
+.prose-custom h3 {
+  @apply font-semibold tracking-tight mt-6 mb-3 text-foreground;
+}
+.prose-custom h1 {
+  @apply text-2xl;
+}
+.prose-custom h2 {
+  @apply text-xl;
+}
+.prose-custom h3 {
+  @apply text-lg;
+}
+.prose-custom p {
+  @apply my-3;
+}
+.prose-custom ul,
+.prose-custom ol {
+  @apply ml-5 my-3 space-y-1.5;
+}
+.prose-custom ul {
+  @apply list-disc;
+}
+.prose-custom ol {
+  @apply list-decimal;
+}
+.prose-custom code {
+  @apply bg-muted/60 px-1.5 py-0.5 rounded text-sm font-mono text-primary;
+}
+.prose-custom pre {
+  @apply bg-muted/40 border border-border rounded-lg p-4 overflow-x-auto my-4;
+}
+.prose-custom pre code {
+  @apply bg-transparent p-0 text-sm text-foreground;
+}
+.prose-custom table {
+  @apply w-full border-collapse my-4 text-sm;
+}
+.prose-custom th,
+.prose-custom td {
+  @apply border border-border px-3 py-2 text-left;
+}
+.prose-custom th {
+  @apply bg-muted/50 font-semibold;
+}
+.prose-custom blockquote {
+  @apply border-l-2 border-primary pl-4 italic text-muted-foreground my-4;
+}
+.prose-custom a {
+  @apply text-primary hover:underline underline-offset-2;
+}
+.prose-custom hr {
+  @apply border-border my-6;
+}
+.prose-custom strong {
+  @apply font-semibold text-foreground;
+}
