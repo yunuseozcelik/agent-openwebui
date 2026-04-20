@@ -11,6 +11,7 @@
   "metadata": {
     "generated_by": "agent-factory",
     "spec_version": "1",
-    "risk_level": "low"
+    "risk_level": "low",
+    "parent_agent_name": "Chat-Agent"
   }
 }

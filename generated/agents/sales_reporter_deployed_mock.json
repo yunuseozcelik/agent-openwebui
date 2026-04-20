@@ -4,10 +4,18 @@
   "model": "gpt-4o",
   "instructions": "Haftalik ve aylik satis verilerini analiz eder, rapor olusturur. Veritabani sorgulari yapabilir ve API entegrasyonu ile CRM verisi cekebilir.",
   "tools": [
-    {"type": "code_interpreter"},
-    {"type": "db_query"},
-    {"type": "api_call"}
+    {
+      "type": "code_interpreter"
+    },
+    {
+      "type": "db_query"
+    },
+    {
+      "type": "api_call"
+    }
   ],
-  "metadata": {},
+  "metadata": {
+    "parent_agent_name": "Finance-Agent"
+  },
   "mock": true
 }

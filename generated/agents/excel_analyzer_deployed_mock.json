@@ -4,9 +4,15 @@
   "model": "gpt-4o",
   "instructions": "Excel ve CSV dosyalarini okuyup veri analizi yapar. Istatistik hesaplama, grafik olusturma ve rapor hazirlama yeteneklerine sahiptir.",
   "tools": [
-    {"type": "file_reader"},
-    {"type": "code_interpreter"}
+    {
+      "type": "file_reader"
+    },
+    {
+      "type": "code_interpreter"
+    }
   ],
-  "metadata": {},
+  "metadata": {
+    "parent_agent_name": "Math-Agent"
+  },
   "mock": true
 }

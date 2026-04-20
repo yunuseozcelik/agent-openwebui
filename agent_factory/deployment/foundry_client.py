@@ -384,6 +384,9 @@ def list_agents() -> list[AgentInfo]:
             # Foundry'den zaten cektiysek duplicate yapma
             if any(a.id == agent_id for a in agents):
                 continue
+            meta = dict(data.get("metadata", {}))
+            if "mock" not in meta:
+                meta["mock"] = data.get("mock", False)
             agents.append(AgentInfo(
                 id=agent_id,
                 name=data.get("name", "Unknown"),
@@ -391,7 +394,7 @@ def list_agents() -> list[AgentInfo]:
                 instructions=data.get("instructions", ""),
                 tools=data.get("tools", []),
                 source="local",
-                metadata={"mock": data.get("mock", False)},
+                metadata=meta,
             ))
         except Exception:
             continue
@@ -527,11 +530,29 @@ def _deployment_refs_by_name() -> dict[str, dict]:
     }
 
 
+def _local_metadata_index() -> dict[str, dict]:
+    """Build agent-name → metadata dict from all local deployed/definition JSON files."""
+    index: dict[str, dict] = {}
+    for path in AGENT_DIR.glob("*.json"):
+        try:
+            data = _read_json_file(path)
+            name = data.get("name", "")
+            meta = data.get("metadata")
+            if name and isinstance(meta, dict) and meta:
+                existing = index.get(name, {})
+                merged = {**meta, **existing}
+                index[name] = merged
+        except Exception:
+            continue
+    return index
+
+
 def _list_foundry_application_agent_infos() -> list[AgentInfo]:
     """List only agents attached to the configured Foundry application."""
     application = get_agent_application()
     app_refs = application.get("properties", {}).get("agents", []) or []
     deployment_refs = _deployment_refs_by_name()
+    local_meta = _local_metadata_index()
     agents: list[AgentInfo] = []
     seen_names: set[str] = set()
 
@@ -544,18 +565,27 @@ def _list_foundry_application_agent_infos() -> list[AgentInfo]:
         dep_ref = deployment_refs.get(name, {})
         fallback_id = str(dep_ref.get("agentId") or app_ref.get("agentId") or name)
         version = str(dep_ref.get("agentVersion") or "")
+
+        # Enrich with locally persisted metadata (contains parent_agent_name etc.)
+        metadata = dict(local_meta.get(name, {}))
+        if version:
+            metadata["agent_version"] = version
+
+        # Infer parent if still missing
+        if not metadata.get("parent_agent_name") and name not in {
+            "Supervisor-Agent", "Synthesis-Agent", *["HR-Agent", "IT-Agent", "Finance-Agent", "Math-Agent", "General-Agent", "Chat-Agent"],
+        }:
+            metadata["parent_agent_name"] = _infer_parent_name(name)
+
         info = AgentInfo(
             id=fallback_id,
             name=name,
             model=FOUNDRY_AGENT_MODEL or "",
-            metadata={},
+            metadata=metadata,
             source="foundry",
         )
-
-        if version:
-            info.metadata = {**info.metadata, "agent_version": version}
-            if not info.id or info.id.startswith("azureml://"):
-                info.id = f"{name}:{version}"
+        if version and (not info.id or info.id.startswith("azureml://")):
+            info.id = f"{name}:{version}"
         agents.append(info)
 
     return agents
@@ -655,51 +685,48 @@ def _wants_standalone(definition: dict) -> bool:
     return any(keyword in text for keyword in keywords)
 
 
+_DOMAIN_MAP: list[tuple[list[str], str]] = [
+    (["hr", "insan kaynakları", "personel", "izin", "bordro", "maas", "işe alım", "ik ", "ik-"], "HR-Agent"),
+    (["it", "bilgi teknoloji", "teknik destek", "yazılım", "donanım", "network", "arıza", "ticket"], "IT-Agent"),
+    (["satış", "satis", "rapor", "gelir", "ciro", "tahsilat",
+      "finans", "muhasebe", "bütçe", "harcama", "avans", "fatura", "ödeme", "maliyet"], "Finance-Agent"),
+    (["excel", "matematik", "hesaplama", "istatistik", "analiz", "formül", "veri analiz"], "Math-Agent"),
+    (["yemek", "menü", "menu", "kafeterya", "öğle", "lunch"], "Chat-Agent"),
+    (["doküman", "dokuman", "döküman", "belge", "arama", "search", "motoru"], "General-Agent"),
+    (["sohbet", "genel", "asistan", "yardımcı", "tüm şirket", "tum sirket",
+      "herkes", "çalışan", "şirket geneli", "genel amaç"], "Chat-Agent"),
+]
+
+
+def _infer_parent_name(text: str) -> str:
+    """Return the best parent agent name for the given free-form text using domain keywords."""
+    # Normalize Turkish İ/I before lowercasing to avoid i̇ (combining dot) mismatch
+    t = text.replace("İ", "i").replace("I", "i").lower()
+    for keywords, parent_name in _DOMAIN_MAP:
+        if any(kw in t for kw in keywords):
+            return parent_name
+    return "Supervisor-Agent"
+
+
 def _select_parent_agent(definition: dict) -> AgentInfo | None:
-    """Pick the most relevant existing agent for ecosystem metadata."""
+    """Pick the most relevant parent agent using domain keyword mapping."""
     if _wants_standalone(definition):
         return None
 
     excluded_names = _excluded_workflow_names() | {"Synthesis-Agent"}
-    candidates = [
-        agent for agent in list_agents()
-        if not agent.id.startswith("draft_") and agent.name not in excluded_names
-    ]
-    if not candidates:
-        supervisor = _find_project_agent_by_name("Supervisor-Agent")
-        if supervisor:
-            return AgentInfo(
-                id=_agent_attr(supervisor, "id", ""),
-                name=_agent_attr(supervisor, "name", "Supervisor-Agent"),
-                model=FOUNDRY_AGENT_MODEL or "",
-                metadata=_agent_attr(supervisor, "metadata", {}) or {},
-            )
-        return None
+    agents_by_name = {
+        a.name: a for a in list_agents()
+        if not a.id.startswith("draft_") and a.name not in excluded_names
+    }
 
-    definition_text = f"{definition.get('name', '')} {definition.get('instructions', '')}".lower()
-    new_tools = _tool_types(definition.get("tools", []))
+    text = f"{definition.get('name', '')} {definition.get('purpose', '')} {definition.get('instructions', '')}"
+    parent_name = _infer_parent_name(text)
+    parent = agents_by_name.get(parent_name)
+    if parent:
+        return parent
 
-    best_agent = None
-    best_score = 0
-    for agent in candidates:
-        score = 0
-        agent_text = f"{agent.name} {agent.instructions}".lower()
-        shared_words = set(definition_text.split()) & set(agent_text.split())
-        score += min(len(shared_words), 5)
-        score += 3 * len(new_tools & _tool_types(agent.tools))
-
-        if score > best_score:
-            best_score = score
-            best_agent = agent
-
-    if best_score > 0:
-        return best_agent
-
-    for agent in candidates:
-        if agent.name == "Supervisor-Agent":
-            return agent
-
-    return None
+    supervisor = agents_by_name.get("Supervisor-Agent")
+    return supervisor
 
 
 def _apply_ecosystem_metadata(definition: dict) -> dict:

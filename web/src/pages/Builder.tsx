@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Textarea } from "@/components/ui";
+import { AgentTree } from "@/components/AgentTree";
 import { WIZARD_STEPS } from "@/lib/wizard";
 import { api, type AnalyzeResult, type BuildPayload, type BuildResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,7 @@ export function Builder() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 md:px-10 py-14 md:py-20">
+      <div className="flex-1 min-w-0">
       {phase === "describe" && (
         <div className="space-y-6 animate-in fade-in duration-300">
           <div>
@@ -125,6 +127,11 @@ export function Builder() {
             >
               Devam
             </Button>
+          </div>
+
+          {/* Ekosistem grafiği */}
+          <div className="pt-4 border-t border-border">
+            <AgentTree />
           </div>
         </div>
       )}
@@ -190,6 +197,7 @@ export function Builder() {
       {phase === "building" && <Center text="Agent oluşturuluyor" />}
 
       {phase === "done" && result && (
+
         <div className="space-y-6 animate-in fade-in duration-300">
           <div>
             <div className="inline-flex items-center gap-2 text-[13px] text-muted mb-3">
@@ -236,6 +244,7 @@ export function Builder() {
           )}
         </div>
       )}
+      </div> {/* flex-1 */}
     </div>
   );
 }

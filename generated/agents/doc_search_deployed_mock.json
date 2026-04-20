@@ -4,10 +4,18 @@
   "model": "gpt-4o-mini",
   "instructions": "Sirket ici dokumantasyon ve PDF arsivinde arama yapar. Bilgi tabani sorgulama ve API ile dis kaynaklardan veri cekebilir.",
   "tools": [
-    {"type": "file_search"},
-    {"type": "file_reader"},
-    {"type": "api_call"}
+    {
+      "type": "file_search"
+    },
+    {
+      "type": "file_reader"
+    },
+    {
+      "type": "api_call"
+    }
   ],
-  "metadata": {},
+  "metadata": {
+    "parent_agent_name": "General-Agent"
+  },
   "mock": true
 }

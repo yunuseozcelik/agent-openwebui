@@ -7,6 +7,7 @@
   "metadata": {
     "generated_by": "agent-factory",
     "spec_version": "1",
-    "risk_level": "high"
+    "risk_level": "high",
+    "parent_agent_name": "HR-Agent"
   }
 }
