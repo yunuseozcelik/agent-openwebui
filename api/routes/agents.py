@@ -6,7 +6,7 @@ import asyncio
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from sse_starlette.sse import EventSourceResponse
+from fastapi.responses import StreamingResponse
 
 from agent_factory.deployment.foundry_client import (
     AgentInfo,
@@ -14,6 +14,7 @@ from agent_factory.deployment.foundry_client import (
     list_agents,
 )
 from agent_factory.runner import AgentRunner
+from agent_factory.orchestrator import orchestrate
 
 from ..schemas import AgentSummary, ChatRequest, ChatResponse
 from ..sessions import session_store
@@ -95,16 +96,68 @@ async def chat_stream(req: ChatRequest):
         yield sse_event("start", {})
         try:
             text = await runner.send(req.message)
-            # Basit chunking — gercek streaming icin runner yeniden yazilabilir
-            chunk_size = 18
-            for i in range(0, len(text), chunk_size):
-                yield sse_event("chunk", {"text": text[i:i + chunk_size]})
-                await asyncio.sleep(0.015)
+            # Kelime kelime streaming animasyonu
+            words = text.split(" ")
+            buf = ""
+            for i, word in enumerate(words):
+                buf += ("" if i == 0 else " ") + word
+                if len(buf) >= 6 or i == len(words) - 1:
+                    yield sse_event("chunk", {"text": buf})
+                    buf = ""
+                    await asyncio.sleep(0.045)
             yield sse_event("done", {"full": text})
         except Exception as exc:
             yield sse_event("error", {"message": str(exc)})
 
-    return EventSourceResponse(generator())
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(generator(), media_type="text/event-stream", headers=headers)
+
+
+@router.post("/chat/orchestrate")
+async def chat_orchestrate(req: ChatRequest):
+    """Supervisor → Alt Agent'lar → Synthesis akisini SSE olarak yayinlar."""
+
+    _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+    async def generator():
+        yield sse_event("start", {})
+        try:
+            async for step in orchestrate(req.message):
+                if step.type == "routing":
+                    yield sse_event("routing", {
+                        "agent": step.agent,
+                        "selected": step.selected,
+                        "text": step.text,
+                    })
+                elif step.type == "agent_start":
+                    yield sse_event("agent_start", {"agent": step.agent})
+                elif step.type == "agent_done":
+                    yield sse_event("agent_done", {
+                        "agent": step.agent,
+                        "text": step.text,
+                    })
+                elif step.type == "synthesis":
+                    yield sse_event("synthesis", {"agent": step.agent})
+                elif step.type == "done":
+                    # Final cevabi kelime kelime stream et
+                    words = step.text.split(" ")
+                    buf = ""
+                    for i, word in enumerate(words):
+                        buf += ("" if i == 0 else " ") + word
+                        if len(buf) >= 6 or i == len(words) - 1:
+                            yield sse_event("chunk", {"text": buf})
+                            buf = ""
+                            await asyncio.sleep(0.045)
+                    yield sse_event("done", {"full": step.text})
+                elif step.type == "error":
+                    yield sse_event("error", {"message": step.text})
+        except Exception as exc:
+            yield sse_event("error", {"message": str(exc)})
+
+    return StreamingResponse(generator(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
 @router.post("/session/new")

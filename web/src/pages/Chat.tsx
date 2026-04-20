@@ -3,13 +3,14 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUp, Bot, Plus, Square, User } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 import { useStore } from "@/store";
-import { streamChat } from "@/lib/api";
+import { streamChat, streamOrchestrate, OrchestrationStep } from "@/lib/api";
 import { cn, getSessionId } from "@/lib/utils";
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
+  steps?: OrchestrationStep[];
 }
 
 export function Chat() {
@@ -40,42 +41,50 @@ export function Chat() {
     setMsgs((m) => m.map((x) => ({ ...x, streaming: false })));
   }
 
+  const isOrchestrator = agent?.name === "Supervisor-Agent";
+
   function send() {
     if (!agent || !input.trim() || busy) return;
     const user: Msg = { role: "user", content: input.trim() };
-    const asst: Msg = { role: "assistant", content: "", streaming: true };
+    const asst: Msg = { role: "assistant", content: "", streaming: true, steps: [] };
     setMsgs((m) => [...m, user, asst]);
     setInput("");
     setBusy(true);
 
-    cancelRef.current = streamChat(
-      { agent_id: agent.id, session_id: sessionId, message: user.content },
-      {
-        onChunk: (t) =>
-          setMsgs((m) => {
-            const c = [...m];
-            const last = c[c.length - 1];
-            if (last?.role === "assistant") last.content += t;
-            return c;
-          }),
-        onDone: (full) => {
-          setMsgs((m) => {
-            const c = [...m];
-            const last = c[c.length - 1];
-            if (last?.role === "assistant") {
-              last.content = full || last.content;
-              last.streaming = false;
-            }
-            return c;
-          });
-          setBusy(false);
-        },
-        onError: () => {
-          setBusy(false);
-          setMsgs((m) => m.map((x) => ({ ...x, streaming: false })));
-        },
-      }
-    );
+    const updateLast = (fn: (m: Msg) => void) =>
+      setMsgs((msgs) => {
+        const c = [...msgs];
+        const last = c[c.length - 1];
+        if (last?.role === "assistant") fn(last);
+        return c;
+      });
+
+    const onChunk = (t: string) => updateLast((m) => { m.content += t; });
+    const onDone = (full: string) => {
+      updateLast((m) => { m.content = full || m.content; m.streaming = false; });
+      setBusy(false);
+    };
+    const onError = () => {
+      setBusy(false);
+      setMsgs((m) => m.map((x) => ({ ...x, streaming: false })));
+    };
+
+    if (isOrchestrator) {
+      cancelRef.current = streamOrchestrate(
+        { agent_id: agent.id, session_id: sessionId, message: user.content },
+        {
+          onStep: (step) => updateLast((m) => { m.steps = [...(m.steps || []), step]; }),
+          onChunk,
+          onDone,
+          onError,
+        }
+      );
+    } else {
+      cancelRef.current = streamChat(
+        { agent_id: agent.id, session_id: sessionId, message: user.content },
+        { onChunk, onDone, onError }
+      );
+    }
   }
 
   if (agents.length === 0) {
@@ -173,6 +182,63 @@ export function Chat() {
   );
 }
 
+function StepBadge({ step }: { step: OrchestrationStep }) {
+  if (step.type === "routing" && step.selected?.length) {
+    return (
+      <div className="text-[11px] text-muted flex flex-wrap gap-1 items-center">
+        <span className="text-subtle">Yönlendirme →</span>
+        {step.selected.map((a) => (
+          <span key={a} className="bg-surface border border-border rounded px-1.5 py-0.5 font-mono">
+            {a}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (step.type === "agent_start") {
+    return (
+      <div className="text-[11px] text-muted flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+        {step.agent} çalışıyor...
+      </div>
+    );
+  }
+  if (step.type === "agent_done") {
+    return (
+      <div className="text-[11px] text-muted flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+        {step.agent} tamamlandı
+      </div>
+    );
+  }
+  if (step.type === "synthesis") {
+    return (
+      <div className="text-[11px] text-muted flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+        Sonuçlar birleştiriliyor...
+      </div>
+    );
+  }
+  return null;
+}
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="w-2 h-2 rounded-full bg-muted"
+          style={{
+            animation: "typing-bounce 1.2s ease-in-out infinite",
+            animationDelay: `${i * 0.2}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function Message({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
   return (
@@ -195,12 +261,23 @@ function Message({ msg }: { msg: Msg }) {
           isUser ? "bg-ink text-white" : "bg-surface"
         )}
       >
-        <div className="text-[14px] whitespace-pre-wrap leading-relaxed break-words">
-          {msg.content}
-          {msg.streaming && (
-            <span className="inline-block w-1.5 h-4 ml-0.5 bg-current opacity-60 animate-pulse align-middle" />
-          )}
-        </div>
+        {msg.steps && msg.steps.length > 0 && (
+          <div className="mb-2 space-y-1">
+            {msg.steps.map((s, i) => (
+              <StepBadge key={i} step={s} />
+            ))}
+          </div>
+        )}
+        {msg.streaming && !msg.content ? (
+          <TypingDots />
+        ) : (
+          <div className="text-[14px] whitespace-pre-wrap leading-relaxed break-words">
+            {msg.content}
+            {msg.streaming && msg.content && (
+              <span className="inline-block w-[2px] h-[1em] ml-0.5 bg-current opacity-70 animate-pulse align-middle" />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

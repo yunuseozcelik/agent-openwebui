@@ -64,6 +64,9 @@ class DeployResponse(BaseModel):
     name: str | None = None
     mock: bool = False
     error: str | None = None
+    application_updated: bool = False
+    application_update_error: str | None = None
+    workflow_update: dict | None = None
 
 
 # ── Chat ──

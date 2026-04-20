@@ -1,0 +1,107 @@
+{
+  "schema_version": "1",
+  "timezone": "Europe/Istanbul",
+  "source": "mock_fnss_lunch_menu",
+  "menus": [
+    {
+      "date": "2026-04-20",
+      "weekday": "Monday",
+      "soup": "Mercimek corbasi",
+      "main": "Izgara tavuk",
+      "side": "Pirinc pilavi",
+      "salad": "Mevsim salata",
+      "dessert": "Sutlac",
+      "calories": 820
+    },
+    {
+      "date": "2026-04-21",
+      "weekday": "Tuesday",
+      "soup": "Ezogelin corbasi",
+      "main": "Etli kuru fasulye",
+      "side": "Bulgur pilavi",
+      "salad": "Coban salata",
+      "dessert": "Meyve",
+      "calories": 910
+    },
+    {
+      "date": "2026-04-22",
+      "weekday": "Wednesday",
+      "soup": "Yayla corbasi",
+      "main": "Sebzeli kofte",
+      "side": "Makarna",
+      "salad": "Roka salata",
+      "dessert": "Revani",
+      "calories": 880
+    },
+    {
+      "date": "2026-04-23",
+      "weekday": "Thursday",
+      "soup": "Domates corbasi",
+      "main": "Tavuk sote",
+      "side": "Patates puresi",
+      "salad": "Akdeniz salata",
+      "dessert": "Ayran",
+      "calories": 790
+    },
+    {
+      "date": "2026-04-24",
+      "weekday": "Friday",
+      "soup": "Tarhana corbasi",
+      "main": "Balik fileto",
+      "side": "Sebzeli pilav",
+      "salad": "Yesil salata",
+      "dessert": "Kazandibi",
+      "calories": 850
+    },
+    {
+      "date": "2026-04-27",
+      "weekday": "Monday",
+      "soup": "Sebze corbasi",
+      "main": "Hindi rosto",
+      "side": "Eriste",
+      "salad": "Mevsim salata",
+      "dessert": "Meyve",
+      "calories": 805
+    },
+    {
+      "date": "2026-04-28",
+      "weekday": "Tuesday",
+      "soup": "Mercimek corbasi",
+      "main": "Karniyarik",
+      "side": "Pirinc pilavi",
+      "salad": "Cacik",
+      "dessert": "Kemalpasa",
+      "calories": 930
+    },
+    {
+      "date": "2026-04-29",
+      "weekday": "Wednesday",
+      "soup": "Mantar corbasi",
+      "main": "Tavuk doner",
+      "side": "Bulgur pilavi",
+      "salad": "Gavurdagi salata",
+      "dessert": "Ayran",
+      "calories": 870
+    },
+    {
+      "date": "2026-04-30",
+      "weekday": "Thursday",
+      "soup": "Dugun corbasi",
+      "main": "Et sote",
+      "side": "Patates kizartmasi",
+      "salad": "Yesil salata",
+      "dessert": "Profiterol",
+      "calories": 960
+    },
+    {
+      "date": "2026-05-01",
+      "weekday": "Friday",
+      "soup": "Yogurt corbasi",
+      "main": "Sebzeli guvec",
+      "side": "Makarna",
+      "salad": "Coban salata",
+      "dessert": "Sutlac",
+      "calories": 780
+    }
+  ]
+}

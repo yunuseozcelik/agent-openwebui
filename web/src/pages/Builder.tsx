@@ -17,6 +17,8 @@ export function Builder() {
   const [stepIdx, setStepIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<BuildResult | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [deployStatus, setDeployStatus] = useState("");
 
   const step = WIZARD_STEPS[stepIdx];
 
@@ -75,9 +77,14 @@ export function Builder() {
   }
 
   async function doDeploy() {
-    if (!result) return;
+    if (!result || deploying) return;
+    console.log("deploy clicked", result.spec_id);
+    setDeploying(true);
+    setDeployStatus("Deploy istegi gonderiliyor...");
+    toast.info("Azure AI Foundry deploy basladi. Bu islem biraz surebilir.");
     try {
       const r = await api.deploy(result.spec_id);
+      setDeployStatus("Deploy cevabi alindi.");
       if (r.success) {
         toast.success("Agent hazır");
         navigate(`/chat?agent=${encodeURIComponent(r.foundry_agent_id || "")}`);
@@ -86,6 +93,8 @@ export function Builder() {
       }
     } catch (e) {
       toast.error(String(e));
+    } finally {
+      setDeploying(false);
     }
   }
 
@@ -210,14 +219,21 @@ export function Builder() {
                 setAnswers({});
                 setStepIdx(0);
                 setResult(null);
+                setDeployStatus("");
               }}
             >
               Yeni
             </Button>
-            <Button size="lg" onClick={doDeploy} className="flex-1">
-              Deploy et
+            <Button size="lg" onClick={doDeploy} disabled={deploying} className="flex-1">
+              {deploying && <Loader2 className="h-4 w-4 animate-spin" />}
+              {deploying ? "Deploy ediliyor..." : "Deploy et"}
             </Button>
           </div>
+          {deployStatus && (
+            <div className="rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-muted">
+              {deployStatus}
+            </div>
+          )}
         </div>
       )}
     </div>

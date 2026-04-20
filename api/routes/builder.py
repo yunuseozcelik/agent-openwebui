@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
@@ -30,6 +32,16 @@ from ..schemas import (
 
 
 router = APIRouter(prefix="/api/builder", tags=["builder"])
+
+
+def _read_json_with_encoding_fallback(path: Path) -> dict:
+    """Read older generated JSON files that may have been written with Windows encoding."""
+    for encoding in ("utf-8", "utf-8-sig", "cp1254", "cp1252"):
+        try:
+            return json.loads(path.read_text(encoding=encoding))
+        except UnicodeDecodeError:
+            continue
+    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
 
 
 # ══════════════════════════════════════════════════
@@ -338,9 +350,14 @@ async def deploy(req: DeployRequest):
     except Exception as exc:
         raise HTTPException(status_code=404, detail=f"Spec bulunamadi: {exc}")
 
-    # Definition'i yeniden uret (en guncel hali icin)
+    # Build asamasinda uretilen zengin definition varsa onu kullan.
+    # Yoksa geriye uyumluluk icin definition'i yeniden uret.
     from agent_factory.builder.scaffolder.prompt_agent import scaffold_prompt_agent
-    definition = scaffold_prompt_agent(spec)
+    definition_path = Path("generated/agents") / f"{spec.id}_definition.json"
+    if definition_path.exists():
+        definition = _read_json_with_encoding_fallback(definition_path)
+    else:
+        definition = scaffold_prompt_agent(spec)
 
     result = deploy_prompt_agent(definition)
 
@@ -350,4 +367,7 @@ async def deploy(req: DeployRequest):
         name=spec.name,
         mock=result.mock,
         error=result.error,
+        application_updated=result.application_updated,
+        application_update_error=result.application_update_error,
+        workflow_update=(result.raw or {}).get("workflow_update") if result.raw else None,
     )

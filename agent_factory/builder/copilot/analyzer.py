@@ -18,6 +18,110 @@ from agent_factory.config import OPENAI_API_KEY, OPENAI_COPILOT_MODEL
 from utils.portkey import get_maf_client_options
 
 
+LUNCH_MENU_DATA_SOURCE = "agent_factory/mock_data/lunch_menu_2026.json"
+
+
+def _is_lunch_menu_request(text: str) -> bool:
+    normalized = (text or "").lower()
+    keywords = (
+        "yemek",
+        "menü",
+        "menu",
+        "öğle",
+        "ogle",
+        "lunch",
+        "haftalık yemek",
+        "haftalik yemek",
+    )
+    return any(keyword in normalized for keyword in keywords)
+
+
+def _fallback_parse_description(description: str) -> dict:
+    """Rule-based fallback for offline/dev mode when LLM analysis is unavailable."""
+    if _is_lunch_menu_request(description):
+        wants_excel = any(
+            keyword in description.lower()
+            for keyword in ("excel", "xlsx", "dosya", "rapor", "yazdır", "yazdir")
+        )
+        tools = ["file_reader", "code_interpreter"] if wants_excel else ["file_reader"]
+        return {
+            "name": "Yemek Menusu Asistani",
+            "purpose": (
+                "Gunun tarihine gore yemek menusunu bulur, haftalik yemek listesini hazirlar "
+                "ve istenirse Excel formatinda raporlar. Mock yemek menu verisini tarih bazli kullanir."
+            ),
+            "inferred_tools": tools,
+            "inferred_data_sources": [LUNCH_MENU_DATA_SOURCE],
+            "suggested_capabilities": [
+                "Bugunun yemek menusunu getirme",
+                "Haftalik yemek menusunu listeleme",
+                "Haftalik menuyu Excel raporuna donusturme",
+                "Tarih bazli menu sorgulama",
+            ],
+            "domain": "genel_ofis",
+            "complexity_hints": {
+                "needs_supervisor": False,
+                "custom_state_required": False,
+                "decision_points": 1,
+                "estimated_complexity": "moderate",
+            },
+        }
+
+    return {
+        "name": "Genel Is Asistani",
+        "purpose": (
+            "Kullanicinin tarif ettigi isi yerine getirmek icin gerekli bilgileri toplar, "
+            "uygun araclari kullanir ve sonucu anlasilir bicimde sunar."
+        ),
+        "inferred_tools": ["file_reader"],
+        "inferred_data_sources": [],
+        "suggested_capabilities": ["Talep analizi", "Bilgi toplama", "Sonuc raporlama"],
+        "domain": "genel",
+        "complexity_hints": {
+            "needs_supervisor": False,
+            "custom_state_required": False,
+            "decision_points": 0,
+            "estimated_complexity": "simple",
+        },
+    }
+
+
+def _fallback_spec_data(
+    *,
+    description: str,
+    name: str,
+    purpose: str,
+    audience: str,
+    inferred_tools: list[str],
+    inferred_data_sources: list[str],
+    pii: str,
+    approval: str,
+) -> dict:
+    parsed = _fallback_parse_description(description)
+    tools = inferred_tools or parsed["inferred_tools"]
+    data_sources = inferred_data_sources or parsed["inferred_data_sources"]
+    return {
+        "name": name or parsed["name"],
+        "purpose": purpose or parsed["purpose"],
+        "user_audience": audience or "kurumsal kullanicilar",
+        "data_sources": data_sources,
+        "tools": [
+            {
+                "name": tool,
+                "type": tool,
+                "description": f"{tool} araci ile ilgili islemleri gerceklestirir.",
+            }
+            for tool in tools
+        ],
+        "risk_level": "low" if pii == "false" else "medium",
+        "contains_pii": pii in ("true", "maybe"),
+        "approval_required": approval in ("true", "conditional"),
+        "needs_supervisor": False,
+        "custom_state_required": False,
+        "decision_points": parsed.get("complexity_hints", {}).get("decision_points", 0),
+    }
+
+
 # ═══════════════════════════════════════════════
 #  Prompt: Description Parse
 # ═══════════════════════════════════════════════
@@ -182,18 +286,21 @@ def _extract_json(text: str) -> dict:
 
 async def parse_description(description: str) -> dict:
     """Kullanicinin ilk tarifini parse et."""
-    client = _create_client()
-    agent = Agent(
-        client=client,
-        name="description_parser",
-        instructions="Sen bir JSON uretici aracsin. Sadece JSON dondur, baska bir sey yazma.",
-    )
+    try:
+        client = _create_client()
+        agent = Agent(
+            client=client,
+            name="description_parser",
+            instructions="Sen bir JSON uretici aracsin. Sadece JSON dondur, baska bir sey yazma.",
+        )
 
-    prompt = PARSE_PROMPT.replace("{description}", description)
-    response = await agent.run(prompt)
+        prompt = PARSE_PROMPT.replace("{description}", description)
+        response = await agent.run(prompt)
 
-    text = getattr(response, "text", "") or str(getattr(response, "value", ""))
-    result = _extract_json(text)
+        text = getattr(response, "text", "") or str(getattr(response, "value", ""))
+        result = _extract_json(text)
+    except Exception:
+        result = _fallback_parse_description(description)
 
     return {
         "name": result.get("name", ""),
@@ -221,31 +328,47 @@ async def build_final_spec_data(
     example_scenario: str = "",
 ) -> dict:
     """Toplanan cevaplardan final spec verisi olustur."""
-    client = _create_client()
-    agent = Agent(
-        client=client,
-        name="spec_builder",
-        instructions="Sen bir JSON uretici aracsin. Sadece JSON dondur, baska bir sey yazma.",
-    )
+    try:
+        client = _create_client()
+        agent = Agent(
+            client=client,
+            name="spec_builder",
+            instructions="Sen bir JSON uretici aracsin. Sadece JSON dondur, baska bir sey yazma.",
+        )
 
-    prompt = SPEC_PROMPT.format(
+        prompt = SPEC_PROMPT.format(
+            description=description,
+            name=name,
+            purpose=purpose,
+            audience=audience,
+            tone=tone,
+            output_format=output_format,
+            pii=pii,
+            approval=approval,
+            scope=scope,
+            example_scenario=example_scenario or "belirtilmedi",
+            tools=json.dumps(inferred_tools),
+            data_sources=json.dumps(inferred_data_sources),
+        )
+
+        response = await agent.run(prompt)
+        text = getattr(response, "text", "") or str(getattr(response, "value", ""))
+        result = _extract_json(text)
+        if result:
+            return result
+    except Exception:
+        pass
+
+    return _fallback_spec_data(
         description=description,
         name=name,
         purpose=purpose,
         audience=audience,
-        tone=tone,
-        output_format=output_format,
+        inferred_tools=inferred_tools,
+        inferred_data_sources=inferred_data_sources,
         pii=pii,
         approval=approval,
-        scope=scope,
-        example_scenario=example_scenario or "belirtilmedi",
-        tools=json.dumps(inferred_tools),
-        data_sources=json.dumps(inferred_data_sources),
     )
-
-    response = await agent.run(prompt)
-    text = getattr(response, "text", "") or str(getattr(response, "value", ""))
-    return _extract_json(text)
 
 
 async def generate_rich_instructions(
@@ -262,16 +385,19 @@ async def generate_rich_instructions(
     approval: str,
 ) -> str:
     """LLM ile zengin agent instructions olustur."""
-    client = _create_client()
-    agent = Agent(
-        client=client,
-        name="instruction_generator",
-        instructions=(
-            "Sen bir AI agent system prompt uzmanisun. "
-            "Verilen bilgilerle mukemmel, detayli ve spesifik bir system prompt olustur. "
-            "Sadece prompt metnini don, baska aciklama ekleme."
-        ),
-    )
+    try:
+        client = _create_client()
+        agent = Agent(
+            client=client,
+            name="instruction_generator",
+            instructions=(
+                "Sen bir AI agent system prompt uzmanisun. "
+                "Verilen bilgilerle mukemmel, detayli ve spesifik bir system prompt olustur. "
+                "Sadece prompt metnini don, baska aciklama ekleme."
+            ),
+        )
+    except Exception:
+        return ""
 
     _tone_labels = {
         "formal": "Resmi ve kurumsal",
@@ -308,8 +434,11 @@ async def generate_rich_instructions(
         approval=approval,
     )
 
-    response = await agent.run(prompt)
-    text = getattr(response, "text", "") or str(getattr(response, "value", ""))
+    try:
+        response = await agent.run(prompt)
+        text = getattr(response, "text", "") or str(getattr(response, "value", ""))
+    except Exception:
+        return ""
 
     # Eger fence icinde geldiyse cikar
     fence = re.search(r"```(?:markdown|text)?\s*(.*?)\s*```", text, re.DOTALL)

@@ -10,6 +10,7 @@ from agent_framework import Agent
 from agent_framework.openai import OpenAIChatClient
 
 from agent_factory.config import OPENAI_API_KEY, OPENAI_MODEL
+from agent_factory.mock_data.context_loader import get_mock_context
 from agent_factory.deployment.foundry_client import get_agent_detail, AgentInfo, FOUNDRY_PROJECT_ENDPOINT
 from utils.portkey import get_maf_client_options
 
@@ -24,7 +25,7 @@ class AgentRunner:
     async def send(self, user_message: str) -> str:
         """Mesaj gonder, cevap al."""
         # Foundry'ye bagliysa gercek agent calistir
-        if FOUNDRY_PROJECT_ENDPOINT and not self.agent_info.id.startswith("mock_"):
+        if FOUNDRY_PROJECT_ENDPOINT and not self.agent_info.id.startswith(("mock_", "draft_")):
             return await self._run_foundry(user_message)
 
         # Mock/local: LLM ile agent'in instructions'ini kullanarak cevap ver
@@ -32,19 +33,49 @@ class AgentRunner:
 
     async def _run_local(self, user_message: str) -> str:
         """Local LLM ile agent'in instructions'ini kullanarak cevap."""
-        client = OpenAIChatClient(
-            **get_maf_client_options(
-                model_id=self.agent_info.model or OPENAI_MODEL,
-                primary_api_key=OPENAI_API_KEY,
-                engine="agent_runner",
-                component=self.agent_info.name,
-            )
+        # gpt-4o ile dene, basarisiz olursa gpt-4o-mini fallback
+        for model in [OPENAI_MODEL, "gpt-4o-mini"]:
+            try:
+                client = OpenAIChatClient(
+                    **get_maf_client_options(
+                        model_id=model,
+                        primary_api_key=OPENAI_API_KEY,
+                        engine="agent_runner",
+                        component=self.agent_info.name,
+                    )
+                )
+                return await self._run_with_client(client, user_message)
+            except Exception:
+                if model == "gpt-4o-mini":
+                    raise
+        raise RuntimeError("Hicbir model ile baglanilamadi")
+
+    async def _run_with_client(self, client: OpenAIChatClient, user_message: str) -> str:
+        base_instructions = self.agent_info.instructions or (
+            f"Sen {self.agent_info.name} isimli bir AI agent'sin. Kullaniciya yardimci ol."
         )
 
-        instructions = self.agent_info.instructions or (
-            f"Sen {self.agent_info.name} isimli bir AI agent'sin. "
-            f"Kullaniciya yardimci ol."
+        mock_context = get_mock_context(self.agent_info.name, self.agent_info.id)
+        data_rule = (
+            "- Asagida 'MEVCUT VERİ' basliginda gercek veri verilmistir. "
+            "YALNIZCA bu veriyi kullan, asla kendinden uydurma veya ornek olusturma."
+            if mock_context else
+            "- Senden veri, rapor veya liste istenirse: kullanicidan ilgili veriyi iste, uydurma."
         )
+
+        instructions = (
+            f"## DAVRANIS KURALLARI (bunlar her seyin onunde gelir)\n"
+            f"- Cevaplar kisa ve net olsun.\n"
+            f"- Selamlama gibi basit mesajlara tek cumle ile karsilik ver.\n"
+            f"- Sen yalnizca '{self.agent_info.name}' agentisin. Gorev taniminin disindaki "
+            f"  isteklerde: 'Bu konuda yardimci olamam, gorevim [konu] ile sinirli.' de.\n"
+            f"{data_rule}\n\n"
+            f"## AGENT TANIMI\n"
+            f"{base_instructions}"
+        )
+
+        if mock_context:
+            instructions += f"\n\n{mock_context}"
 
         agent = Agent(
             client=client,
@@ -52,12 +83,10 @@ class AgentRunner:
             instructions=instructions,
         )
 
-        # Basit history management — MAF Agent.run her seferinde yeni
-        # conversation baslatiyor, bu yuzden history'yi prompt'a ekliyoruz
         context = ""
         if self._history:
             context = "Onceki konusma:\n"
-            for msg in self._history[-10:]:  # Son 10 mesaj
+            for msg in self._history[-10:]:
                 role = "Kullanici" if msg["role"] == "user" else "Agent"
                 context += f"{role}: {msg['content']}\n"
             context += "\n---\nSimdi kullanicinin yeni mesaji:\n"

@@ -74,6 +74,9 @@ export interface DeployResult {
   name: string | null;
   mock: boolean;
   error: string | null;
+  application_updated?: boolean;
+  application_update_error?: string | null;
+  workflow_update?: Record<string, unknown> | null;
 }
 
 async function j<T>(path: string, init?: RequestInit): Promise<T> {
@@ -109,6 +112,66 @@ export const api = {
       body: JSON.stringify({ template_id, overrides: {} }),
     }),
 };
+
+export interface OrchestrationStep {
+  type: "routing" | "agent_start" | "agent_done" | "synthesis" | "chunk" | "done" | "error";
+  agent?: string;
+  selected?: string[];
+  text?: string;
+  full?: string;
+  message?: string;
+}
+
+export function streamOrchestrate(
+  payload: { agent_id: string; session_id: string; message: string },
+  handlers: {
+    onStep: (step: OrchestrationStep) => void;
+    onChunk: (t: string) => void;
+    onDone: (full: string) => void;
+    onError: (e: string) => void;
+  }
+): () => void {
+  const ctrl = new AbortController();
+
+  fetch("/api/agents/chat/orchestrate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: ctrl.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok || !res.body) return handlers.onError(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() || "";
+        for (const part of parts) {
+          let event = "message";
+          let data = "";
+          for (const line of part.split("\n")) {
+            if (line.startsWith("event: ")) event = line.slice(7).trim();
+            else if (line.startsWith("data: ")) data = line.slice(6);
+          }
+          if (!data) continue;
+          try {
+            const o = JSON.parse(data);
+            if (event === "chunk") handlers.onChunk(o.text || "");
+            else if (event === "done") handlers.onDone(o.full || "");
+            else if (event === "error") handlers.onError(o.message || "hata");
+            else handlers.onStep({ type: event as OrchestrationStep["type"], ...o });
+          } catch {}
+        }
+      }
+    })
+    .catch((e) => e.name !== "AbortError" && handlers.onError(String(e)));
+
+  return () => ctrl.abort();
+}
 
 export function streamChat(
   payload: { agent_id: string; session_id: string; message: string },

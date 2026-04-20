@@ -631,6 +631,24 @@ async def _handle_deploy(spec_id: str):
         if result.mock:
             mock = "\n\n> Mock deployment. Gerçek deploy için `.env`'de `FOUNDRY_PROJECT_ENDPOINT` tanımlayın."
 
+        app_update_line = "| **Application update** | Atlandi |"
+        if result.application_updated:
+            app_update_line = "| **Application update** | Tamamlandi |"
+        elif result.application_update_error:
+            app_update_line = f"| **Application update** | Atlandi (`{result.application_update_error}`) |"
+
+        workflow_line = "| **Workflow update** | Atlandi |"
+        workflow_update = (result.raw or {}).get("workflow_update") if result.raw else None
+        workflow_error = (result.raw or {}).get("workflow_update_error") if result.raw else None
+        if workflow_update:
+            workflow_agent = workflow_update.get("workflow_agent", {})
+            workflow_line = (
+                "| **Workflow update** | Tamamlandi "
+                f"(`{workflow_agent.get('name', 'workflow')}` v{workflow_agent.get('version', '?')}) |"
+            )
+        elif workflow_error:
+            workflow_line = f"| **Workflow update** | Atlandi (`{workflow_error}`) |"
+
         dm.content = (
             f"### ✓ Deploy Başarılı\n\n"
             f"| | |\n|:--|:--|\n"
@@ -638,6 +656,8 @@ async def _handle_deploy(spec_id: str):
             f"| **Spec ID** | `{spec_id}` |\n"
             f"| **Platform** | Azure AI Foundry |\n"
             f"| **Durum** | <span style='color:#10b981'>Aktif</span> |\n"
+            f"{app_update_line}\n"
+            f"{workflow_line}\n"
             f"\n**Agent ile konuşmak için sayfayı yenileyip sol üstteki menüden seçin.**"
             f"{mock}"
         )

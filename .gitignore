@@ -6,4 +6,13 @@ venv/
 .venv/
 .vscode/
 .idea/
+.azure-cli/
+ifs_servis.txt
 .claude
+data/
+generated/agents/*_deployed.json
+generated/workflows/
+web/node_modules/
+web/dist/
+web/dist-tsnode/
+web/tsconfig.tsbuildinfo
