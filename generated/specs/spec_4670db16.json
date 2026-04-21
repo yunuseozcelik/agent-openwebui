@@ -1,0 +1,33 @@
+{
+  "id": "spec_4670db16",
+  "version": 1,
+  "created_at": "2026-04-21T08:42:54.249654",
+  "name": "Excel Dosya Sunucu",
+  "purpose": "Bu agent, şirket sistemindeki Excel dosyalarını kullanıcı taleplerine göre düzenler ve istenen formatlarda sunarak çalışma verimliliğini artırır.",
+  "user_audience": "Tüm şirket çalışanları için kullanılabilir.",
+  "data_sources": [
+    "yerel_dosyalar",
+    "döküman_klasörleri"
+  ],
+  "tools": [
+    {
+      "name": "file_reader",
+      "type": "file_reader",
+      "description": "file_reader araci",
+      "config": {}
+    },
+    {
+      "name": "code_interpreter",
+      "type": "code_interpreter",
+      "description": "code_interpreter araci",
+      "config": {}
+    }
+  ],
+  "risk_level": "high",
+  "approval_required": false,
+  "contains_pii": true,
+  "needs_supervisor": false,
+  "custom_state_required": false,
+  "decision_points": 0,
+  "suggested_type": null
+}

@@ -60,7 +60,7 @@ export function Builder() {
       audience: answers.audience ?? "tum_sirket",
       tone: answers.tone ?? "friendly",
       output_format: answers.output_format ?? "adaptive",
-      scope: "no_restriction",
+      scope: answers.scope ?? "strict_scope",
       pii: answers.pii ?? "maybe",
       approval: answers.approval ?? "conditional",
       example_scenario: "skip",
@@ -73,6 +73,12 @@ export function Builder() {
       const r = await api.build(payload);
       setResult(r);
       setPhase("done");
+      // Backend'den gelen uyarıları göster
+      if ((r as any).warnings?.length) {
+        for (const w of (r as any).warnings) {
+          toast.warning(w);
+        }
+      }
     } catch (e) {
       toast.error("Oluşturma başarısız: " + String(e));
       setPhase("wizard");
@@ -89,10 +95,17 @@ export function Builder() {
       const r = await api.deploy(result.spec_id);
       setDeployStatus("Deploy cevabi alindi.");
       if (r.success) {
-        toast.success("Agent hazır");
+        if (r.mock) {
+          toast.success("Agent oluşturuldu (mock — Foundry bağlantısı kurulamadı)");
+        } else {
+          toast.success("Agent başarıyla Azure'a deploy edildi");
+        }
+        if (r.application_update_error) {
+          toast.warning("Application güncelleme uyarısı: " + r.application_update_error);
+        }
         navigate(`/chat?agent=${encodeURIComponent(r.foundry_agent_id || "")}`);
       } else {
-        toast.error(r.error || "Başarısız");
+        toast.error("Deploy başarısız: " + (r.error || "Bilinmeyen hata"));
       }
     } catch (e) {
       toast.error(String(e));
@@ -227,9 +240,8 @@ export function Builder() {
             </p>
           </div>
 
-          <Card className="p-4 text-[13px] text-muted whitespace-pre-wrap font-mono leading-relaxed max-h-64 overflow-y-auto">
-            {result.instructions.slice(0, 500)}
-            {result.instructions.length > 500 && "..."}
+          <Card className="p-4 text-[13px] text-muted whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">
+            {result.instructions}
           </Card>
 
           <div className="flex gap-2">

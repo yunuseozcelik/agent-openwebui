@@ -1,29 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)",
-      "Bash(venv\\\\Scripts\\\\pip:*)",
-      "Bash(E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe install:*)",
-      "Bash(./venv/Scripts/pip.exe install:*)",
-      "Bash(./venv/Scripts/python.exe:*)",
-      "Bash(python:*)",
-      "Bash(cmd /c \"dir /b E:\\\\agent_supervisor\")",
-      "WebSearch",
-      "Bash(git reset:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nmicrosoft agent guncellemesi\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git checkout:*)",
-      "Bash(git push:*)",
-      "Bash(findstr:*)",
-      "Bash(git -C \"E:\\\\agent_supervisor\" branch -a)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(venvScriptsactivate)",
+      "Bash(git pull:*)",
       "Bash(pip install:*)",
-      "Bash(cmd.exe /c \"E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe install agent-framework[openai] --pre 2>&1\")",
-      "Bash(cmd.exe /c \"E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe install \"\"agent-framework[openai]\"\" --pre\")",
-      "Bash(powershell.exe -Command \"& ''E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\pip.exe'' install ''agent-framework[openai]'' --pre 2>&1\")",
-      "Bash(powershell.exe -Command \"& ''E:\\\\agent_supervisor\\\\venv\\\\Scripts\\\\python.exe'' -c ''from agent_framework import Agent, tool; from agent_framework.openai import OpenAIChatClient; from agent_framework.orchestrations import HandoffBuilder; print\\(\"\"OK - all imports work\"\"\\)'' 2>&1\")",
-      "Bash(powershell.exe:*)"
+      "Bash(ls -la .env*)",
+      "Bash(xargs wc:*)",
+      "Bash(where az:*)",
+      "Read(//c/Program Files/Microsoft SDKs/Azure/CLI2/wbin/**)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft SDKs/Azure/CLI2/wbin/**)",
+      "Bash(curl -s http://127.0.0.1:8000/api/agents)",
+      "Bash(python -m json.tool)",
+      "Bash(npm run:*)",
+      "Bash(.venv/Scripts/python.exe -c \"from agent_framework.openai import OpenAIChatClient; import inspect; print\\(inspect.signature\\(OpenAIChatClient.__init__\\)\\)\")",
+      "Bash(gh auth:*)",
+      "Bash(where gh:*)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)"
     ]
   }
 }

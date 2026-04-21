@@ -162,6 +162,7 @@ async def build(req: BuildRequest):
 
     # 2. LLM instructions
     instructions = None
+    instructions_warning = None
     try:
         instructions = await generate_rich_instructions(
             name=spec.name,
@@ -176,8 +177,10 @@ async def build(req: BuildRequest):
             pii=req.pii,
             approval=req.approval,
         )
-    except Exception:
+    except Exception as exc:
         instructions = None
+        instructions_warning = f"Özel talimatlar üretilemedi, şablon kullanılacak: {exc}"
+        print(f"[build] instructions generation failed: {exc}")
 
     # 3. Pipeline
     wizard_answers = {
@@ -226,14 +229,19 @@ async def build(req: BuildRequest):
             # datetime/object fields'i serialize edilebilir yap
             import json as _json
             graph_json = _json.loads(_json.dumps(graph_json, default=str))
-    except Exception:
+    except Exception as exc:
         graph_json = None
+        print(f"[build] graph generation failed: {exc}")
 
     pipeline_dict = {
         "stages": [asdict(s) for s in pipeline.stages],
         "review_summary": pipeline.review_summary,
         "definition": pipeline.definition,
     }
+
+    warnings = []
+    if instructions_warning:
+        warnings.append(instructions_warning)
 
     return BuildResponse(
         spec_id=spec.id,
@@ -243,6 +251,7 @@ async def build(req: BuildRequest):
         ready_for_approval=pipeline.ready_for_approval,
         integrations=integrations_list[:5],
         graph=graph_json,
+        warnings=warnings,
     )
 
 
@@ -286,9 +295,15 @@ async def build_stream(req: BuildRequest):
                 tools=req.inferred_tools, data_sources=req.inferred_data_sources,
                 pii=req.pii, approval=req.approval,
             )
-        except Exception:
+        except Exception as exc:
             instructions = None
-        yield sse_event("stage", {"name": "instructions", "status": "pass", "data": {"length": len(instructions or "")}})
+            print(f"[build/stream] instructions generation failed: {exc}")
+        yield sse_event("stage", {
+            "name": "instructions",
+            "status": "pass" if instructions else "warning",
+            "data": {"length": len(instructions or "")},
+            "message": None if instructions else "Özel talimatlar üretilemedi, şablon kullanılacak",
+        })
 
         wizard_answers = {
             "audience": req.audience, "tone": req.tone, "output_format": req.output_format,
@@ -327,8 +342,9 @@ async def build_stream(req: BuildRequest):
             if fig:
                 import json as _json
                 graph_json = _json.loads(_json.dumps(fig.to_plotly_json(), default=str))
-        except Exception:
+        except Exception as exc:
             graph_json = None
+            print(f"[build/stream] graph generation failed: {exc}")
 
         yield sse_event("result", {
             "spec_id": spec.id,
