@@ -250,13 +250,27 @@ def _get_foundry_client():
         return None
     try:
         from azure.ai.projects import AIProjectClient
+    except ImportError:
+        return None
+
+    # 1) Local'de AzureCliPathCredential dene (az.cmd ile)
+    try:
         return AIProjectClient(
             endpoint=config.project_endpoint,
             credential=AzureCliPathCredential(),
             allow_preview=True,
         )
-    except ImportError:
-        return None
+    except Exception:
+        pass
+
+    # 2) Azure'da DefaultAzureCredential dene (Managed Identity)
+    try:
+        from azure.identity import DefaultAzureCredential
+        return AIProjectClient(
+            endpoint=config.project_endpoint,
+            credential=DefaultAzureCredential(),
+            allow_preview=True,
+        )
     except Exception:
         return None
 
