@@ -355,16 +355,54 @@ def list_agent_application_agents() -> list[dict]:
 
 
 def list_agents() -> list[AgentInfo]:
-    """Mevcut agent'lari listele. Foundry + local deploy kayitlari."""
-    # 1. Foundry Agent Application is the source of truth when available.
-    try:
-        foundry_agents = _list_foundry_application_agent_infos()
-        if foundry_agents:
-            return foundry_agents
-    except Exception:
-        pass
-
+    """Mevcut agent'lari listele. Sadece local kaynaklar — Foundry bagimsiz."""
     agents: list[AgentInfo] = []
+    seen_names: set[str] = set()
+
+    # 1. Seed agents (her zaman var)
+    for seed in SEED_AGENT_DEFINITIONS:
+        name = seed["name"]
+        if name in seen_names:
+            continue
+        agents.append(AgentInfo(
+            id=name,
+            name=name,
+            model=FOUNDRY_AGENT_MODEL or "",
+            instructions=seed.get("instructions", ""),
+            tools=[{"type": t} if isinstance(t, str) else t for t in seed.get("tools", [])],
+            metadata=dict(seed.get("metadata", {})),
+            source="local",
+        ))
+        seen_names.add(name)
+
+    # 2. Local deploy kayitlari (custom agentlar)
+    for path in AGENT_DIR.glob("*_deployed*.json"):
+        try:
+            data = _read_json_file(path)
+            name = data.get("name", "")
+            if not name or name in seen_names:
+                continue
+            agent_id = data.get("foundry_agent_id", "") or name
+            meta = dict(data.get("metadata", {}))
+            if "mock" not in meta:
+                meta["mock"] = data.get("mock", False)
+            if not meta.get("parent_agent_name"):
+                meta["parent_agent_name"] = _infer_parent_name(name)
+            agents.append(AgentInfo(
+                id=agent_id,
+                name=name,
+                model=data.get("model", "") or FOUNDRY_AGENT_MODEL or "",
+                instructions=data.get("instructions", ""),
+                tools=data.get("tools", []),
+                metadata=meta,
+                source="local",
+            ))
+            seen_names.add(name)
+        except Exception:
+            continue
+
+    if agents:
+        return agents
 
     # 2. Project-level Foundry fallback.
     client = _get_foundry_client()
@@ -424,23 +462,19 @@ def list_agents() -> list[AgentInfo]:
 
 
 def get_agent_detail(agent_id: str) -> AgentInfo | None:
-    """Tek bir agent'in detayini cek."""
-    # Foundry'den dene
-    client = _get_foundry_client()
-    if client and not agent_id.startswith(("mock_", "draft_")):
-        try:
-            a = client.agents.get_agent(agent_id)
+    """Tek bir agent'in detayini cek. Once local, sonra Foundry fallback."""
+    # Seed agent mi?
+    for seed in SEED_AGENT_DEFINITIONS:
+        if seed["name"] == agent_id:
             return AgentInfo(
-                id=a.id,
-                name=a.name or "Unnamed",
-                model=a.model or "",
-                instructions=getattr(a, "instructions", "") or "",
-                tools=getattr(a, "tools", []) or [],
-                metadata=getattr(a, "metadata", {}) or {},
-                source="foundry",
+                id=seed["name"],
+                name=seed["name"],
+                model=FOUNDRY_AGENT_MODEL or "",
+                instructions=seed.get("instructions", ""),
+                tools=[{"type": t} if isinstance(t, str) else t for t in seed.get("tools", [])],
+                metadata=dict(seed.get("metadata", {})),
+                source="local",
             )
-        except Exception:
-            pass
 
     # Local'den ara
     for path in AGENT_DIR.glob("*.json"):
@@ -465,6 +499,161 @@ def get_agent_detail(agent_id: str) -> AgentInfo | None:
             continue
 
     return None
+
+
+# ---------------------------------------------------------------------------
+# Agent edit / delete helpers
+# ---------------------------------------------------------------------------
+
+def update_agent_local(agent_id: str, updates: dict) -> AgentInfo | None:
+    """Update instructions/name in local JSON files. Returns updated AgentInfo or None."""
+    for path in AGENT_DIR.glob("*.json"):
+        try:
+            data = _read_json_file(path)
+            spec_id = data.get("spec_id", "")
+            if (
+                data.get("foundry_agent_id") == agent_id
+                or spec_id == agent_id
+                or f"draft_{spec_id}" == agent_id
+                or data.get("name") == agent_id
+            ):
+                if "instructions" in updates:
+                    data["instructions"] = updates["instructions"]
+                if "name" in updates:
+                    data["name"] = updates["name"]
+                if "purpose" in updates:
+                    meta = data.get("metadata", {})
+                    meta["purpose"] = updates["purpose"]
+                    data["metadata"] = meta
+                path.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+                return AgentInfo(
+                    id=agent_id,
+                    name=data.get("name", ""),
+                    model=data.get("model", ""),
+                    instructions=data.get("instructions", ""),
+                    tools=data.get("tools", []),
+                    metadata=data.get("metadata", {}),
+                    source="local",
+                )
+        except Exception:
+            continue
+    return None
+
+
+def remove_agent_from_application(agent_name: str) -> bool:
+    """Remove an agent reference from the Foundry Application + Deployment. Returns True on success."""
+    removed_anywhere = False
+
+    # 1. Remove from Application
+    try:
+        application = get_agent_application()
+        properties = _writable_application_properties(dict(application.get("properties", {})))
+        agents = list(properties.get("agents", []))
+        filtered = [a for a in agents if a.get("agentName") != agent_name]
+        if len(filtered) != len(agents):
+            properties["agents"] = filtered
+            properties.setdefault("displayName", FOUNDRY_APPLICATION_NAME or "Agent Factory")
+            properties["isEnabled"] = properties.get("isEnabled", True)
+            properties["tags"] = _agent_factory_tags(properties.get("tags"))
+            update_agent_application({"properties": properties})
+            removed_anywhere = True
+    except Exception as exc:
+        print(f"[delete_agent] application update failed: {exc}")
+
+    # 2. Remove from Deployment
+    try:
+        deployment = get_agent_deployment()
+        dep_props = _writable_deployment_properties(dict(deployment.get("properties", {})))
+        dep_agents = list(dep_props.get("agents", []))
+        filtered = [a for a in dep_agents if a.get("agentName") != agent_name]
+        if len(filtered) != len(dep_agents):
+            dep_props["agents"] = filtered
+            dep_props["deploymentType"] = dep_props.get("deploymentType") or FOUNDRY_AGENT_DEPLOYMENT_TYPE or "Managed"
+            dep_props.setdefault("protocols", _default_protocols())
+            dep_props["tags"] = _agent_factory_tags(dep_props.get("tags"))
+            update_agent_deployment({"properties": dep_props})
+            removed_anywhere = True
+    except Exception as exc:
+        print(f"[delete_agent] deployment update failed: {exc}")
+
+    # 3. Delete the agent version from the Foundry project (so it doesn't linger)
+    try:
+        client = _get_foundry_client()
+        if client:
+            try:
+                versions = list(client.agents.list_versions(agent_name))
+                for v in versions:
+                    try:
+                        version = _agent_attr(v, "version", None) or _agent_attr(v, "agent_version", None)
+                        if version:
+                            client.agents.delete_version(agent_name, str(version))
+                            removed_anywhere = True
+                    except Exception as exc:
+                        print(f"[delete_agent] delete_version failed for {agent_name}: {exc}")
+            except Exception as exc:
+                print(f"[delete_agent] list_versions failed for {agent_name}: {exc}")
+    except Exception as exc:
+        print(f"[delete_agent] project client error: {exc}")
+
+    return removed_anywhere
+
+
+def delete_agent(agent_id: str) -> bool:
+    """Delete agent from local files AND remove from Foundry Application.
+
+    agent_id can be the agent name, spec_id, draft_spec_id, or foundry_agent_id.
+    Returns True if anything was deleted.
+    """
+    # Collect the agent name from local files before deleting
+    agent_name: str | None = None
+    for path in list(AGENT_DIR.glob("*.json")):
+        try:
+            data = _read_json_file(path)
+            spec_id = data.get("spec_id", "")
+            if (
+                data.get("foundry_agent_id") == agent_id
+                or spec_id == agent_id
+                or f"draft_{spec_id}" == agent_id
+                or data.get("name") == agent_id
+            ):
+                agent_name = data.get("name") or agent_id
+                break
+        except Exception:
+            continue
+
+    # If no local file matched, the agent_id itself is likely the name (Foundry-only agent)
+    if agent_name is None:
+        agent_name = agent_id
+
+    # 1. Delete local files
+    local_deleted = False
+    for path in list(AGENT_DIR.glob("*.json")):
+        try:
+            data = _read_json_file(path)
+            spec_id = data.get("spec_id", "")
+            if (
+                data.get("foundry_agent_id") == agent_id
+                or spec_id == agent_id
+                or f"draft_{spec_id}" == agent_id
+                or data.get("name") == agent_id
+                or data.get("name") == agent_name
+            ):
+                path.unlink()
+                local_deleted = True
+        except Exception:
+            continue
+
+    # 2. Remove from Foundry Application (best-effort)
+    foundry_removed = remove_agent_from_application(agent_name)
+
+    return local_deleted or foundry_removed
+
+
+def delete_agent_local(agent_id: str) -> bool:
+    """Alias kept for compatibility — use delete_agent() instead."""
+    return delete_agent(agent_id)
 
 
 def _metadata_as_strings(metadata: dict) -> dict[str, str]:
@@ -548,19 +737,42 @@ def _local_metadata_index() -> dict[str, dict]:
 
 
 def _list_foundry_application_agent_infos() -> list[AgentInfo]:
-    """List only agents attached to the configured Foundry application."""
+    """List only agents attached to the configured Foundry application.
+
+    Orphan refs (Application'da var ama project'te agent yok) otomatik temizlenir.
+    """
     application = get_agent_application()
     app_refs = application.get("properties", {}).get("agents", []) or []
     deployment_refs = _deployment_refs_by_name()
     local_meta = _local_metadata_index()
+
+    client = _get_foundry_client()
+    reserved = {FOUNDRY_APPLICATION_NAME, FOUNDRY_AGENT_DEPLOYMENT_NAME, _workflow_agent_name()}
+
     agents: list[AgentInfo] = []
     seen_names: set[str] = set()
+    valid_refs: list[dict] = []
+    orphan_found = False
 
     for app_ref in app_refs:
         name = _agent_name_from_reference(app_ref)
         if not name or name in seen_names:
             continue
+
+        # Her agent icin projede var mi kontrol et — orphan ise atla ve temizlenecekler listesine ekle
+        if client and name not in reserved:
+            exists = False
+            try:
+                versions = list(client.agents.list_versions(name, limit=1, order="desc"))
+                exists = bool(versions)
+            except Exception:
+                exists = False
+            if not exists:
+                orphan_found = True
+                continue
+
         seen_names.add(name)
+        valid_refs.append(app_ref)
 
         dep_ref = deployment_refs.get(name, {})
         fallback_id = str(dep_ref.get("agentId") or app_ref.get("agentId") or name)
@@ -587,6 +799,18 @@ def _list_foundry_application_agent_infos() -> list[AgentInfo]:
         if version and (not info.id or info.id.startswith("azureml://")):
             info.id = f"{name}:{version}"
         agents.append(info)
+
+    # Orphan referanslar varsa Application listesini kalici olarak temizle
+    if orphan_found:
+        try:
+            props = _writable_application_properties(dict(application.get("properties", {})))
+            props["agents"] = valid_refs
+            props.setdefault("displayName", FOUNDRY_APPLICATION_NAME or "Agent Factory")
+            props["isEnabled"] = props.get("isEnabled", True)
+            props["tags"] = _agent_factory_tags(props.get("tags"))
+            update_agent_application({"properties": props})
+        except Exception as exc:
+            print(f"[list_agents] orphan cleanup failed: {exc}")
 
     return agents
 
@@ -894,8 +1118,15 @@ def _try_attach_agent_to_deployment(agent, definition: dict) -> dict:
     properties["tags"] = _agent_factory_tags(properties.get("tags"))
 
     payload = {"properties": properties}
-    raw = update_agent_deployment(payload)
-    return {"updated": True, "raw": raw, "agentReference": ref}
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            raw = update_agent_deployment(payload)
+            return {"updated": True, "raw": raw, "agentReference": ref}
+        except Exception as exc:
+            last_error = exc
+            time.sleep(1.5 * (attempt + 1))
+    return {"updated": False, "error": str(last_error)}
 
 
 def _try_attach_agent_to_application(agent, definition: dict) -> dict:
@@ -932,8 +1163,16 @@ def _try_attach_agent_to_application(agent, definition: dict) -> dict:
     properties["isEnabled"] = properties.get("isEnabled", True)
     properties["tags"] = _agent_factory_tags(properties.get("tags"))
 
-    raw = update_agent_application({"properties": properties})
-    return {"updated": True, "raw": raw, "agentReference": ref}
+    # ARM bazen gecici 404 SystemError doner — 2 kez retry
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            raw = update_agent_application({"properties": properties})
+            return {"updated": True, "raw": raw, "agentReference": ref}
+        except Exception as exc:
+            last_error = exc
+            time.sleep(1.5 * (attempt + 1))
+    return {"updated": False, "error": str(last_error)}
 
 
 def _seed_agent_metadata(seed: dict) -> dict[str, str]:
@@ -1426,46 +1665,42 @@ def deploy_prompt_agent(definition: dict) -> DeploymentResult:
             description=(definition.get("purpose") or definition.get("instructions", ""))[:512],
         )
 
-        application_update = _try_attach_agent_to_application(agent, definition)
-        deployment_update = _try_attach_agent_to_deployment(agent, definition)
-        workflow_update = None
-        workflow_update_error = None
-        try:
-            workflow_update = sync_workflow_agent_to_foundry()
-        except Exception as exc:
-            workflow_update_error = str(exc)
-
+        # Agent olustu — local dosyayi hemen yaz, attach/workflow'u arka planda yap
         result_data = {
             "foundry_agent_id": agent.id,
             "name": getattr(agent, "name", definition["name"]),
             "model": getattr(agent, "model", definition["model"]),
+            "instructions": definition.get("instructions", ""),
+            "tools": definition.get("tools", []),
             "created_at": str(getattr(agent, "created_at", "")),
             "metadata": definition.get("metadata", {}),
-            "application_update": application_update,
-            "deployment_update": deployment_update,
-            "workflow_update": workflow_update,
-            "workflow_update_error": workflow_update_error,
         }
-
         log_path = AGENT_DIR / f"{definition['spec_id']}_deployed.json"
         log_path.write_text(json.dumps(result_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        # Arka planda Foundry Application/Deployment/Workflow senkronizasyonu
+        import threading
+
+        def _background_sync():
+            try:
+                _try_attach_agent_to_application(agent, definition)
+            except Exception as exc:
+                print(f"[deploy bg] app attach failed: {exc}")
+            try:
+                _try_attach_agent_to_deployment(agent, definition)
+            except Exception as exc:
+                print(f"[deploy bg] dep attach failed: {exc}")
+            try:
+                sync_workflow_agent_to_foundry()
+            except Exception as exc:
+                print(f"[deploy bg] workflow sync failed: {exc}")
+
+        threading.Thread(target=_background_sync, daemon=True).start()
 
         return DeploymentResult(
             success=True,
             foundry_agent_id=agent.id,
-            application_updated=bool(application_update.get("updated")) and bool(deployment_update.get("updated")),
-            application_update_error=(
-                application_update.get("error")
-                or application_update.get("reason")
-                or deployment_update.get("error")
-                or deployment_update.get("reason")
-                or workflow_update_error
-            ),
-            application_update_raw={
-                "application": application_update,
-                "deployment": deployment_update,
-                "workflow": workflow_update,
-            },
+            application_updated=False,  # arka planda, henuz bilmiyoruz
             raw=result_data,
         )
     except Exception as e:

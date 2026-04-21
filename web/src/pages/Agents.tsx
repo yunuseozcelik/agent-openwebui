@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Bot, Plus } from "lucide-react";
+import { ArrowRight, Bot, Pencil, Plus } from "lucide-react";
 import { useStore } from "@/store";
 import { Button, Card } from "@/components/ui";
 import { truncate } from "@/lib/utils";
+
+const SEED_NAMES = new Set([
+  "Supervisor-Agent", "Synthesis-Agent",
+  "HR-Agent", "IT-Agent", "Finance-Agent",
+  "Math-Agent", "General-Agent", "Chat-Agent",
+]);
 
 export function Agents() {
   const agents = useStore((s) => s.agents);
@@ -29,25 +35,38 @@ export function Agents() {
       ) : (
         <div className="space-y-1.5">
           {agents.map((a) => (
-            <Link
-              key={a.id}
-              to={`/chat?agent=${encodeURIComponent(a.id)}`}
-              className="flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3.5 hover:border-ink transition-colors group"
-            >
-              <Bot className="h-4 w-4 text-muted shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-medium truncate flex items-center gap-2">
-                  {a.name}
-                  {a.status === "mock" && (
-                    <span className="text-[10px] font-normal text-subtle">mock</span>
-                  )}
+            <div key={a.id} className="flex items-center gap-1">
+              <Link
+                to={`/chat?agent=${encodeURIComponent(a.id)}`}
+                className="flex-1 flex items-center gap-3 rounded-lg border border-border bg-white px-4 py-3.5 hover:border-ink transition-colors group"
+              >
+                <Bot className="h-4 w-4 text-muted shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[14px] font-medium truncate flex items-center gap-2">
+                    {a.name}
+                    {a.status === "mock" && (
+                      <span className="text-[10px] font-normal text-subtle">mock</span>
+                    )}
+                    {!!a.metadata?.parent_agent_name && (
+                      <span className="text-[10px] font-normal text-amber-600">
+                        ↳ {String(a.metadata.parent_agent_name)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[12px] text-muted truncate">
+                    {truncate(a.instructions.replace(/\n/g, " "), 100) || a.model}
+                  </div>
                 </div>
-                <div className="text-[12px] text-muted truncate">
-                  {truncate(a.instructions.replace(/\n/g, " "), 100) || a.model}
-                </div>
-              </div>
-              <ArrowRight className="h-4 w-4 text-subtle group-hover:text-ink transition-colors" />
-            </Link>
+                <ArrowRight className="h-4 w-4 text-subtle group-hover:text-ink transition-colors" />
+              </Link>
+              <Link
+                to={`/agents/${encodeURIComponent(a.id)}/edit`}
+                title="Düzenle"
+                className="p-2 rounded-lg border border-border bg-white hover:border-ink transition-colors text-muted hover:text-ink"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           ))}
         </div>
       )}

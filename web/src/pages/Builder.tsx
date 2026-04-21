@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, Textarea } from "@/components/ui";
-import { AgentTree } from "@/components/AgentTree";
+import { AgentFlow } from "@/components/AgentFlow";
 import { WIZARD_STEPS } from "@/lib/wizard";
 import { api, type AnalyzeResult, type BuildPayload, type BuildResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export function Builder() {
   const [result, setResult] = useState<BuildResult | null>(null);
   const [deploying, setDeploying] = useState(false);
   const [deployStatus, setDeployStatus] = useState("");
+  const [inferredParent, setInferredParent] = useState<string | undefined>();
 
   const step = WIZARD_STEPS[stepIdx];
 
@@ -32,6 +33,7 @@ export function Builder() {
     try {
       const r = await api.analyze(description);
       setAnalyze(r);
+      setInferredParent(r.inferred_parent);
       setPhase("wizard");
     } catch (e) {
       toast.error(String(e));
@@ -131,7 +133,10 @@ export function Builder() {
 
           {/* Ekosistem grafiği */}
           <div className="pt-4 border-t border-border">
-            <AgentTree />
+            <p className="text-[10px] uppercase tracking-widest text-muted mb-3 text-center">
+              Mevcut Ekosistem
+            </p>
+            <AgentFlow height={340} />
           </div>
         </div>
       )}
@@ -190,6 +195,17 @@ export function Builder() {
               <ArrowLeft className="h-4 w-4" />
               Geri
             </Button>
+          </div>
+
+          {/* Ön izleme: yeni agent ekosistemde nereye gidecek */}
+          <div className="pt-4 border-t border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted mb-3 text-center">
+              Ekosistemde Ön İzleme
+            </p>
+            <AgentFlow
+              height={300}
+              previewAgent={{ name: analyze.name, parentName: inferredParent }}
+            />
           </div>
         </div>
       )}

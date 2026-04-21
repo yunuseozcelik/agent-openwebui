@@ -21,6 +21,7 @@ class AnalyzeResponse(BaseModel):
     suggested_capabilities: list[str] = []
     domain: str = "genel"
     complexity_hints: dict[str, Any] = {}
+    inferred_parent: str = ""
 
 
 # ── Build (finalize) ──
@@ -104,3 +105,20 @@ class AgentSummary(BaseModel):
     metadata: dict = {}
     source: str = "local"
     status: str = "active"  # active | mock | draft
+
+
+class AgentUpdateRequest(BaseModel):
+    instructions: str | None = None
+    name: str | None = None
+    purpose: str | None = None
+
+
+class AgentUpdateResponse(BaseModel):
+    success: bool
+    agent: AgentSummary | None = None
+    error: str | None = None
+
+
+class AgentDeleteResponse(BaseModel):
+    success: bool
+    error: str | None = None

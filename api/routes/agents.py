@@ -10,13 +10,22 @@ from fastapi.responses import StreamingResponse
 
 from agent_factory.deployment.foundry_client import (
     AgentInfo,
+    delete_agent as foundry_delete_agent,
     get_agent_detail,
     list_agents,
+    update_agent_local,
 )
 from agent_factory.runner import AgentRunner
 from agent_factory.orchestrator import orchestrate
 
-from ..schemas import AgentSummary, ChatRequest, ChatResponse
+from ..schemas import (
+    AgentDeleteResponse,
+    AgentSummary,
+    AgentUpdateRequest,
+    AgentUpdateResponse,
+    ChatRequest,
+    ChatResponse,
+)
 from ..sessions import session_store
 from ..streaming import sse_event
 
@@ -158,6 +167,34 @@ async def chat_orchestrate(req: ChatRequest):
             yield sse_event("error", {"message": str(exc)})
 
     return StreamingResponse(generator(), media_type="text/event-stream", headers=_SSE_HEADERS)
+
+
+@router.patch("/{agent_id}", response_model=AgentUpdateResponse)
+async def update_agent(agent_id: str, req: AgentUpdateRequest):
+    updates = req.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="Guncelleme alani belirtilmedi")
+    updated = update_agent_local(agent_id, updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Agent bulunamadi veya guncellenemedi")
+    return AgentUpdateResponse(success=True, agent=_to_summary(updated))
+
+
+@router.delete("/{agent_id}", response_model=AgentDeleteResponse)
+async def delete_agent_route(agent_id: str):
+    seed_names = {
+        "Supervisor-Agent", "Synthesis-Agent",
+        "HR-Agent", "IT-Agent", "Finance-Agent",
+        "Math-Agent", "General-Agent", "Chat-Agent",
+    }
+    # Strip ":version" suffix that appears in Foundry-listed agent ids
+    bare_id = agent_id.split(":", 1)[0] if ":" in agent_id else agent_id
+    if bare_id in seed_names or agent_id in seed_names:
+        raise HTTPException(status_code=403, detail="Sistem agentlari silinemez")
+    deleted = foundry_delete_agent(bare_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Agent bulunamadi")
+    return AgentDeleteResponse(success=True)
 
 
 @router.post("/session/new")

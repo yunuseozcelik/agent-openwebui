@@ -129,10 +129,16 @@ def _fallback_spec_data(
 PARSE_PROMPT = """Kullanicinin asagidaki agent tarifini derinlemesine analiz et.
 Cevabi SADECE JSON olarak don, baska bir sey yazma.
 
+ONEMLI FELSEFE: Olusturulan tum agentlar SISTEMDEN HAZIR VERI CEKEN PRESENTER'lardir.
+Agent kendi basina icerik URETMEZ, PLANLAMAZ, OZELLESTIRMEZ. Sadece sistemdeki hazir
+veriyi (ornek: haftalik yemek menusu, izin bakiyesi, satis raporu) kullaniciya
+iletir. "Olusturur", "planlar", "oneri sunar", "ozellestirilmis" gibi ifadeler
+KULLANMA. Bunun yerine "sistemden getirir", "gosterir", "iletir", "raporlar" kullan.
+
 JSON formati:
 {{
   "name": "Kisa ve aciklayici agent ismi (Turkce, 2-4 kelime)",
-  "purpose": "Agent ne yapacak, 2-3 cumle ile detayli aciklama (Turkce)",
+  "purpose": "Agent sistemdeki hangi veriyi kullaniciya sunacak, 1-2 cumle (Turkce). 'Planlar/olusturur' DEGIL 'sistemdeki X verisini getirir/gosterir'",
   "inferred_tools": ["tool_tipi1", "tool_tipi2"],
   "inferred_data_sources": ["kaynak1", "kaynak2"],
   "suggested_capabilities": ["yetenek1", "yetenek2", "yetenek3"],
@@ -216,8 +222,20 @@ Risk seviyesi belirleme:
 #  Prompt: Instruction Generation
 # ═══════════════════════════════════════════════
 
-INSTRUCTION_PROMPT = """Asagidaki agent spec bilgilerine gore, agent'in calisma zamaninda
-kullanacagi MUKEMMEL bir system prompt olustur.
+INSTRUCTION_PROMPT = """Asagidaki agent spec bilgilerine gore system prompt olustur.
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  KRITIK FELSEFE — HER SEYIN ONUNDE                                   ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  Bu agent bir PRESENTER / DATA DELIVERY agent'idir.                  ║
+║  - Sistem ona runtime'da hazir mock/gercek veri enjekte eder.        ║
+║  - Agent'in TEK gorevi: bu veriyi kullaniciya iletmek.               ║
+║  - Agent KENDISI icerik URETMEZ, PLANLAMAZ, OZELLESTIRMEZ,           ║
+║    HESAPLAMAZ, ONERI SUNMAZ.                                         ║
+║  - Kullanicidan "tercih, alerji, besin kisitlamasi, amacin ne" gibi  ║
+║    seyler SORMAZ. Sistem verisi neyse onu gosterir.                  ║
+║  - Veri gelmediyse "Bu konuda veri bulamadim" der, uydurmaz.         ║
+╚══════════════════════════════════════════════════════════════════════╝
 
 ## Agent Bilgileri
 - Isim: {name}
@@ -225,33 +243,28 @@ kullanacagi MUKEMMEL bir system prompt olustur.
 - Hedef Kitle: {audience}
 - Iletisim Tonu: {tone}
 - Cikti Formati: {output_format}
-- Kapsam Siniri: {scope}
-- Ornek Senaryo: {example_scenario}
 - Tool'lar: {tools}
 - Veri Kaynaklari: {data_sources}
-- PII Var mi: {pii}
-- Onay Gerekli mi: {approval}
 
-## Talimatlar
-Olusturacagin system prompt su bolumlerden olusmali:
+## System prompt bolumleri (kisa tut, her biri 1-3 cumle)
 
-1. KIMLIK: Agent'in kim oldugu, adi, rolu (1-2 cumle)
-2. GOREV TANIMI: Ne yapacagi detayli aciklama (3-5 cumle)
-3. HEDEF KITLE: Kiminle konustugu ve onlarin beklentileri
-4. YETENEKLER: Yapabilecegi spesifik isler (madde madde)
-5. KULLANILABILIR ARACLAR: Her tool'u nasil ve ne zaman kullanacagi
-6. CIKTI FORMATI: Cevaplari nasil yapilandirmali
-7. ILETISIM TARZI: Nasil konusmali, ton ve uslup
-8. KURALLAR VE SINIRLAR: Kesinlikle yapmamasi gerekenler
-9. HATA YONETIMI: Belirsizlik veya hata durumunda ne yapmali
-10. ORNEK ETKILESIM: Tipik bir soru-cevap ornegi (varsa)
+1. KIMLIK: "Ben {name}. Gorevim sistemdeki [X] verisini kullaniciya sunmak."
+2. GOREV: Sistemden ne veriyi nasil gosterecegi. "Planlar/ozellestirir"
+   DEGIL "sistemden getirir ve sunar".
+3. CALISMA PRENSIBI (zorunlu, aynen yaz):
+   "Runtime'da sana 'MEVCUT VERI' basligi altinda sistem verisi verilir.
+   SADECE bu veriyi kullan. Kendinden icerik uretme, planlama, ozellestirme.
+   Kullanicidan tercih/alerji/amac sorma. Veri yoksa 'veri bulunamadi' de."
+4. CIKTI FORMATI: Veriyi nasil bicimlendirecegi (tablo/liste).
+5. KAPSAM DISI: Kapsam disi sorularda kisaca reddet.
 
-ONEMLI:
-- Prompt Turkce olmali
-- Cok spesifik ve aksiyon odakli olmali
-- "Yapabilirsin" yerine "Yapacaksin" gibi kesin ifadeler kullan
-- Agent'in kendi basina karar verebilecegi ve kullaniciya danismasi gereken durumlari net ayir
-- Sadece prompt metnini don, baska aciklama ekleme
+KURALLAR:
+- Prompt Turkce, 200-350 kelime arasinda, KISA ve AKSIYON ODAKLI.
+- "Ozellestirilmis", "kisiye ozel", "tercihlere gore", "planlama",
+  "oneri sunma", "olusturma" kelimelerini KULLANMA.
+- "Sistemdeki veriyi", "hazir veriden", "iletir", "raporlar", "gosterir"
+  kelimelerini kullan.
+- Sadece prompt metnini don, baska aciklama ekleme.
 """
 
 

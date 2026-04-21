@@ -6,6 +6,7 @@ export interface AnalyzeResult {
   suggested_capabilities: string[];
   domain: string;
   complexity_hints: Record<string, unknown>;
+  inferred_parent?: string;
 }
 
 export interface BuildPayload {
@@ -105,6 +106,13 @@ export const api = {
       body: JSON.stringify({ spec_id }),
     }),
   agents: () => j<Agent[]>("/api/agents"),
+  updateAgent: (id: string, payload: { instructions?: string; name?: string; purpose?: string }) =>
+    j<{ success: boolean; agent?: Agent }>(`/api/agents/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteAgent: (id: string) =>
+    j<{ success: boolean }>(`/api/agents/${encodeURIComponent(id)}`, { method: "DELETE" }),
   templates: () => j<Template[]>("/api/templates"),
   buildFromTemplate: (template_id: string) =>
     j<BuildResult>("/api/templates/build", {

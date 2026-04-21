@@ -7,6 +7,7 @@ import { Builder } from "@/pages/Builder";
 import { Agents } from "@/pages/Agents";
 import { Templates } from "@/pages/Templates";
 import { Chat } from "@/pages/Chat";
+import { AgentEdit } from "@/pages/AgentEdit";
 import { api } from "@/lib/api";
 import { useStore } from "@/store";
 
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/agents" element={<Agents />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/agents/:agentId/edit" element={<AgentEdit />} />
         </Routes>
       </main>
       <Toaster

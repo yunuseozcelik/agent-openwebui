@@ -55,7 +55,16 @@ async def analyze(req: AnalyzeRequest):
 
     try:
         result = await parse_description(req.description)
-        return AnalyzeResponse(**result)
+        # Infer parent agent for preview
+        try:
+            from agent_factory.deployment.foundry_client import _infer_parent_name
+            inferred_parent = _infer_parent_name(
+                f"{result.get('name', '')} {result.get('purpose', '')} {req.description}"
+            )
+            result["inferred_parent"] = inferred_parent
+        except Exception:
+            pass
+        return AnalyzeResponse(**{k: v for k, v in result.items() if k in AnalyzeResponse.model_fields})
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Analiz hatasi: {exc}")
 

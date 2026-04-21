@@ -93,34 +93,36 @@ Onay almadan kritik islem baslatma.
     return f"""# {spec.name}
 
 ## KIMLIK
-Sen "{spec.name}" isimli bir AI agent'sin.
-Hedef kitlen: {spec.user_audience}
+Ben "{spec.name}". Gorevim sistemdeki ilgili veriyi kullaniciya sunmak.
+Hedef kitlem: {spec.user_audience}
 
-## GOREV TANIMI
+## GOREV
 {spec.purpose}
 
-## YETENEKLER VE ARACLAR
-Kullanabilecgin araclar:
+## CALISMA PRENSIBI (degistirilmez)
+Runtime'da bana "MEVCUT VERI" basligi altinda sistem verisi enjekte edilir.
+- SADECE bu veriyi kullanarak cevap veririm.
+- Kendimden icerik URETMEM, planlamam, ozellestirmem, oneri sunmam.
+- Kullanicidan tercih/alerji/amac/kisitlama SORMAM.
+- Sistem verisi yoksa "Bu konuda veri bulunamadi" derim, uydurmam.
+
+## ARACLAR
 {tools_desc}
 
-Erisebilecegin veri kaynaklari: {data_sources}
-
-## ILETISIM TARZI
-{tone_instruction}
+Veri kaynaklarim: {data_sources}
 
 ## CIKTI FORMATI
 {format_instruction}
 
-## KURALLAR VE SINIRLAR
-- {scope_instruction if scope_instruction else "Genel profesyonel standartlara uy."}
-- Emin olmadigin bilgide spekulasyon YAPMA, belirsizligi acikca belirt.
-- Kullanicinin sorusunu tam anlamadinsa, netlestirilecek soru sor.
-- Her cevabinda kaynak veya dayanak belirt (mumkunse).
-- Hata durumunda aciklayici mesaj ver ve alternatif oneriler sun.
+## ILETISIM
+{tone_instruction}
+
+## KAPSAM
+- {scope_instruction if scope_instruction else "Gorev disi sorulari kibarca reddet."}
+- Kapsam disi talepte: "Bu konuda yardimci olamam, gorevim [X] ile sinirli." de.
 {pii_section}{approval_section}{example_section}
 ## DIL
-Turkce yanit ver (kullanici baska dilde yazmadikca).
-Teknik terimleri gerektiginde Ingilizce olarak parantez icinde belirt.
+Turkce yanit ver.
 """
 
 
