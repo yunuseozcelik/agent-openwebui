@@ -46,6 +46,21 @@ async def health():
     return {"ok": True, "service": "agent-factory", "version": "2.0.0"}
 
 
+@app.get("/api/debug/foundry")
+async def debug_foundry():
+    """Foundry baglanti durumunu kontrol et (gecici debug endpoint)."""
+    import io, contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        from agent_factory.deployment.foundry_client import _get_foundry_client
+        client = _get_foundry_client()
+    return {
+        "client_ok": client is not None,
+        "client_type": type(client).__name__ if client else None,
+        "logs": buf.getvalue(),
+    }
+
+
 # ── Static frontend (prod build) ──
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 

@@ -247,31 +247,42 @@ def _get_foundry_client():
     """Foundry SDK varsa client dondur, yoksa None."""
     config = _resolve_foundry_config()
     if not config.project_endpoint:
+        print("[foundry_client] project_endpoint bos, client olusturulamiyor")
         return None
     try:
         from azure.ai.projects import AIProjectClient
     except ImportError:
+        print("[foundry_client] azure.ai.projects import hatasi")
         return None
 
     # 1) Local'de AzureCliPathCredential dene (az.cmd ile)
     try:
+        cred = AzureCliPathCredential()
+        # Token alabiliyormuyuz test et
+        cred.get_token("https://cognitiveservices.azure.com/.default")
+        print("[foundry_client] AzureCliPathCredential basarili")
         return AIProjectClient(
             endpoint=config.project_endpoint,
-            credential=AzureCliPathCredential(),
+            credential=cred,
             allow_preview=True,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[foundry_client] AzureCliPathCredential basarisiz: {exc}")
 
     # 2) Azure'da DefaultAzureCredential dene (Managed Identity)
     try:
         from azure.identity import DefaultAzureCredential
+        cred = DefaultAzureCredential()
+        # Token alabiliyormuyuz test et
+        cred.get_token("https://cognitiveservices.azure.com/.default")
+        print("[foundry_client] DefaultAzureCredential basarili")
         return AIProjectClient(
             endpoint=config.project_endpoint,
-            credential=DefaultAzureCredential(),
+            credential=cred,
             allow_preview=True,
         )
-    except Exception:
+    except Exception as exc:
+        print(f"[foundry_client] DefaultAzureCredential basarisiz: {exc}")
         return None
 
 
