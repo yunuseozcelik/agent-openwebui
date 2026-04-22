@@ -7,7 +7,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from agent_factory.builder.copilot.analyzer import (
@@ -353,7 +353,21 @@ async def build_stream(req: BuildRequest):
 # ══════════════════════════════════════════════════
 
 @router.post("/deploy", response_model=DeployResponse)
-async def deploy(req: DeployRequest):
+async def deploy(req: DeployRequest, x_user_email: str | None = Header(default=None)):
+    from agent_factory.user_context import allowed_parents_for, resolve_user
+
+    user = resolve_user(x_user_email)
+    allowed_parents = set(allowed_parents_for(user))
+
+    # Kullanicinin rolu istenen parent'a yetkili mi?
+    requested_parent = req.parent_agent_name or "Supervisor-Agent"
+    if requested_parent not in allowed_parents:
+        raise HTTPException(
+            status_code=403,
+            detail=f"'{user.get('name')}' rolunun '{requested_parent}' altina agent ekleme yetkisi yok. "
+                   f"Izin verilen: {', '.join(sorted(allowed_parents))}",
+        )
+
     try:
         spec = load_spec(req.spec_id)
     except Exception as exc:
@@ -367,6 +381,36 @@ async def deploy(req: DeployRequest):
         definition = _read_json_with_encoding_fallback(definition_path)
     else:
         definition = scaffold_prompt_agent(spec)
+
+    # Uygulama override'larini uygula (builder on izleme ekranindan)
+    if req.name:
+        definition["name"] = req.name
+    if req.purpose:
+        definition["purpose"] = req.purpose
+    if req.instructions:
+        definition["instructions"] = req.instructions
+    if req.parent_agent_name is not None:
+        metadata = dict(definition.get("metadata", {}))
+        metadata["parent_agent_name"] = req.parent_agent_name
+        # Parent'in allowed_roles'unu miras al
+        from agent_factory.deployment.seed_agents import SEED_AGENT_DEFINITIONS
+        parent_def = next((d for d in SEED_AGENT_DEFINITIONS if d["name"] == req.parent_agent_name), None)
+        if parent_def:
+            inherited = parent_def.get("metadata", {}).get("allowed_roles")
+            if inherited:
+                metadata["allowed_roles"] = list(inherited)
+        definition["metadata"] = metadata
+
+    # Spec dosyasini da guncelle ki UI tutarli kalsin
+    if req.name or req.purpose or req.instructions:
+        try:
+            if req.name:
+                spec.name = req.name
+            if req.purpose:
+                spec.purpose = req.purpose
+            save_spec(spec)
+        except Exception:
+            pass
 
     result = deploy_prompt_agent(definition)
 

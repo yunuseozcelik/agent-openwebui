@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button, Card, Textarea } from "@/components/ui";
+import { Button, Card, Input, Textarea } from "@/components/ui";
 import { AgentFlow } from "@/components/AgentFlow";
 import { WIZARD_STEPS } from "@/lib/wizard";
 import { api, type AnalyzeResult, type BuildPayload, type BuildResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/store";
 
 type Phase = "describe" | "analyzing" | "wizard" | "building" | "done";
 
@@ -21,6 +22,16 @@ export function Builder() {
   const [deploying, setDeploying] = useState(false);
   const [deployStatus, setDeployStatus] = useState("");
   const [inferredParent, setInferredParent] = useState<string | undefined>();
+  const [editName, setEditName] = useState("");
+  const [editPurpose, setEditPurpose] = useState("");
+  const [editInstructions, setEditInstructions] = useState("");
+  const [editParent, setEditParent] = useState<string>("");
+
+  const me = useStore((s) => s.me);
+  const PARENT_OPTIONS = me?.allowed_parents?.length
+    ? me.allowed_parents
+    : ["Supervisor-Agent", "HR-Agent", "IT-Agent", "Finance-Agent",
+       "Math-Agent", "General-Agent", "Chat-Agent"];
 
   const step = WIZARD_STEPS[stepIdx];
 
@@ -72,6 +83,11 @@ export function Builder() {
     try {
       const r = await api.build(payload);
       setResult(r);
+      setEditName(String(r.spec?.name ?? analyze.name ?? ""));
+      setEditPurpose(String(r.spec?.purpose ?? analyze.purpose ?? ""));
+      setEditInstructions(r.instructions || "");
+      const desired = inferredParent || "Supervisor-Agent";
+      setEditParent(PARENT_OPTIONS.includes(desired) ? desired : PARENT_OPTIONS[0]);
       setPhase("done");
     } catch (e) {
       toast.error("Oluşturma başarısız: " + String(e));
@@ -86,7 +102,12 @@ export function Builder() {
     setDeployStatus("Deploy istegi gonderiliyor...");
     toast.info("Azure AI Foundry deploy basladi. Bu islem biraz surebilir.");
     try {
-      const r = await api.deploy(result.spec_id);
+      const r = await api.deploy(result.spec_id, {
+        name: editName.trim() || undefined,
+        purpose: editPurpose.trim() || undefined,
+        instructions: editInstructions.trim() || undefined,
+        parent_agent_name: editParent || undefined,
+      });
       setDeployStatus("Deploy cevabi alindi.");
       if (r.success) {
         toast.success("Agent hazır");
@@ -217,20 +238,66 @@ export function Builder() {
         <div className="space-y-6 animate-in fade-in duration-300">
           <div>
             <div className="inline-flex items-center gap-2 text-[13px] text-muted mb-3">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Hazır
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Ön izleme
             </div>
             <h1 className="text-3xl font-semibold tracking-tight mb-2">
-              {String(result.spec?.name ?? "Agent")}
+              Deploy öncesi kontrol
             </h1>
             <p className="text-muted text-[14px]">
-              {String(result.spec?.purpose ?? "")}
+              Agent bilgilerini gözden geçirin. Yanlış anlaşılmışsa düzenleyip deploy edin.
             </p>
           </div>
 
-          <Card className="p-4 text-[13px] text-muted whitespace-pre-wrap font-mono leading-relaxed max-h-64 overflow-y-auto">
-            {result.instructions.slice(0, 500)}
-            {result.instructions.length > 500 && "..."}
-          </Card>
+          {/* Ekosistem önizlemesi */}
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-muted mb-3 text-center">
+              Ekosistemde Nereye Eklenecek
+            </p>
+            <AgentFlow
+              height={280}
+              previewAgent={{ name: editName || "Yeni Agent", parentName: editParent }}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted mb-1.5 block">İsim</label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted mb-1.5 block">Bağlanacağı Dal</label>
+              <select
+                value={editParent}
+                onChange={(e) => setEditParent(e.target.value)}
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-[14px]"
+              >
+                {PARENT_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted mb-1.5 block">Amaç</label>
+              <Textarea
+                value={editPurpose}
+                onChange={(e) => setEditPurpose(e.target.value)}
+                className="min-h-[70px]"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted mb-1.5 block">
+                Sistem Talimatları
+              </label>
+              <Textarea
+                value={editInstructions}
+                onChange={(e) => setEditInstructions(e.target.value)}
+                className="min-h-[220px] font-mono text-[12px] leading-relaxed"
+              />
+            </div>
+          </div>
 
           <div className="flex gap-2">
             <Button

@@ -73,9 +73,10 @@ function SynthesisNode({ data }: { data: { label: string } }) {
 
 function PreviewNode({ data }: { data: { label: string } }) {
   return (
-    <div className="rounded-xl border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 text-[11px] text-green-700 shadow-sm min-w-[110px] text-center animate-pulse">
-      <Handle type="target" position={Position.Top} style={{ background: "#4ade80" }} />
-      {data.label} ✦
+    <div className="rounded-xl border-2 border-dashed border-emerald-500 bg-emerald-100 px-4 py-2 text-[12px] font-semibold text-emerald-800 shadow-lg min-w-[130px] text-center ring-4 ring-emerald-200 animate-pulse">
+      <Handle type="target" position={Position.Top} style={{ background: "#10b981" }} />
+      ✦ {data.label}
+      <div className="text-[9px] font-normal text-emerald-700 mt-0.5">yeni eklenecek</div>
     </div>
   );
 }
@@ -261,6 +262,7 @@ export function AgentFlow({ previewAgent, height = 400 }: AgentFlowProps) {
           { color: "bg-slate-300",  label: "Seed" },
           { color: "bg-amber-300",  label: "Özel" },
           { color: "bg-blue-300",   label: "Synthesis" },
+          ...(previewAgent ? [{ color: "bg-green-400 animate-pulse", label: "Yeni ✦" }] : []),
         ].map(({ color, label }) => (
           <span key={label} className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${color}`} />

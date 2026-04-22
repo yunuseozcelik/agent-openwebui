@@ -17,6 +17,7 @@ from .routes.agents import router as agents_router
 from .routes.analytics import router as analytics_router
 from .routes.builder import router as builder_router
 from .routes.templates import router as templates_router
+from .routes.users import router as users_router
 
 
 app = FastAPI(
@@ -39,6 +40,7 @@ app.include_router(builder_router)
 app.include_router(agents_router)
 app.include_router(templates_router)
 app.include_router(analytics_router)
+app.include_router(users_router)
 
 
 @app.get("/api/health")

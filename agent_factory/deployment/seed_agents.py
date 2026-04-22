@@ -37,7 +37,8 @@ SEED_AGENT_DEFINITIONS: list[dict] = [
             "Kullaniciya ait bilgi gerekiyorsa oturum baglamindaki e-posta bilgisini kullan.\n"
             "Eksik bilgi varsa kisa ve net soru sor. Turkce cevap ver."
         ),
-        "metadata": {"role": "specialist", "department": "HR", "parent_agent": "Supervisor-Agent"},
+        "metadata": {"role": "specialist", "department": "HR", "parent_agent": "Supervisor-Agent",
+                     "allowed_roles": ["hr", "manager"]},
     },
     {
         "name": "IT-Agent",
@@ -53,7 +54,8 @@ SEED_AGENT_DEFINITIONS: list[dict] = [
             "Parca sorgularinda parca numarasini kullan; yoksa kisa netlestirme sor.\n"
             "Turkce, teknik ama anlasilir cevap ver."
         ),
-        "metadata": {"role": "specialist", "department": "IT", "parent_agent": "Supervisor-Agent"},
+        "metadata": {"role": "specialist", "department": "IT", "parent_agent": "Supervisor-Agent",
+                     "allowed_roles": ["engineering", "manager"]},
     },
     {
         "name": "Finance-Agent",
@@ -68,7 +70,8 @@ SEED_AGENT_DEFINITIONS: list[dict] = [
             "Parasal konularda dikkatli ol; tutar, gerekce ve geri odeme bilgisi eksikse netlestir.\n"
             "Islem yapmadan once ozet gec ve onay iste. Turkce ve resmi cevap ver."
         ),
-        "metadata": {"role": "specialist", "department": "Finance", "parent_agent": "Supervisor-Agent"},
+        "metadata": {"role": "specialist", "department": "Finance", "parent_agent": "Supervisor-Agent",
+                     "allowed_roles": ["finance", "manager"]},
     },
     {
         "name": "Math-Agent",

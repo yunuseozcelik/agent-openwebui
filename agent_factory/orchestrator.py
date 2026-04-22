@@ -86,14 +86,53 @@ def _load_agent_index() -> dict[str, dict]:
     return index
 
 
+_STOP_WORDS = {
+    "ve", "ile", "icin", "ya", "veya", "da", "de", "bir", "bu", "su",
+    "agent", "agenti", "asistan", "asistani", "uzmani", "yonetir", "eder",
+    "yapar", "kullanici", "kullaniciya", "sistem", "sistemden", "sunar",
+    "iletir", "getirir", "the", "and", "for", "with", "of", "to", "a",
+}
+
+
+def _keywords_for(defn: dict) -> list[str]:
+    """Agent icin routing keyword'leri cikar: isim + purpose + tool adlari."""
+    parts: list[str] = []
+    name = defn.get("name", "")
+    purpose = defn.get("purpose", "") or ""
+    parts.extend(re.findall(r"[A-Za-zcCgGiIsSuUoO\u00c0-\u024f]+", purpose.lower()))
+
+    # Tool names (snake_case -> kelime)
+    for t in defn.get("tools", []) or []:
+        tname = t.get("name") if isinstance(t, dict) else str(t)
+        if tname:
+            parts.extend(tname.lower().replace("-", "_").split("_"))
+
+    # Isimden de (HR, IT, Finance gibi)
+    parts.extend(re.findall(r"[A-Za-z]+", name.lower()))
+
+    seen: list[str] = []
+    for p in parts:
+        if len(p) < 3 or p in _STOP_WORDS or p in seen:
+            continue
+        seen.append(p)
+        if len(seen) >= 8:
+            break
+    return seen
+
+
 def _supervisor_instructions(index: dict[str, dict]) -> str:
     excluded = {"Supervisor-Agent", "Synthesis-Agent", "FNSS", "FNSS-Workflow"}
     lines = []
     for name, defn in index.items():
         if name in excluded:
             continue
-        purpose = defn.get("purpose", "")
-        lines.append(f"- {name}: {purpose[:100]}" if purpose else f"- {name}")
+        purpose = (defn.get("purpose", "") or "").strip().replace("\n", " ")
+        keywords = _keywords_for(defn)
+        kw_str = ", ".join(keywords) if keywords else "-"
+        if purpose:
+            lines.append(f"- **{name}** — {purpose[:140]}\n    anahtar: {kw_str}")
+        else:
+            lines.append(f"- **{name}**\n    anahtar: {kw_str}")
 
     agent_list = "\n".join(lines)
     base = next(
@@ -102,9 +141,14 @@ def _supervisor_instructions(index: dict[str, dict]) -> str:
     )
     return (
         f"{base}\n\n"
-        "## MEVCUT AGENTLAR\n"
-        f"Asagidaki agentlari kullanabilirsin:\n{agent_list}\n\n"
-        "SELECTED_AGENTS formatinda yalnizca bu listeden sec."
+        "## MEVCUT AGENTLAR (dinamik liste — deploy edilen yeni agentlar burada otomatik gorunur)\n"
+        f"{agent_list}\n\n"
+        "## YONLENDIRME KURALLARI\n"
+        "- Kullanicinin mesajindaki ifadeleri her agent'in 'anahtar' kelimelerine karsi esle.\n"
+        "- Birden fazla agent uyuyorsa birden fazla sec (ornek: izin + avans -> HR-Agent, Finance-Agent).\n"
+        "- Hicbir agent tam uymuyorsa en yakin uzmanli sec, son care olarak General-Agent veya Chat-Agent.\n"
+        "- SADECE yukaridaki listeden isim sec. Uydurma.\n"
+        "- Format: 'SELECTED_AGENTS: Agent-1, Agent-2' ardindan 'ROUTING_REASON: kisa gerekce'.\n"
     )
 
 
@@ -163,8 +207,22 @@ async def _run_agent(name: str, prompt: str, user_message: str = "",
 # Orchestration pipeline
 # ---------------------------------------------------------------------------
 
-async def orchestrate(user_message: str) -> AsyncIterator[StepEvent]:
+async def orchestrate(
+    user_message: str,
+    user_email: str | None = None,
+) -> AsyncIterator[StepEvent]:
+    from agent_factory.user_context import can_see_agent, resolve_user
+
     index = _load_agent_index()
+    user = resolve_user(user_email)
+
+    # Kullanicinin goremedigi agent'lari index'ten cikar ki supervisor yonlendirmesin.
+    # Supervisor/Synthesis her zaman kalir (sistem agent'lari).
+    protected = {"Supervisor-Agent", "Synthesis-Agent"}
+    index = {
+        name: defn for name, defn in index.items()
+        if name in protected or can_see_agent(user, defn.get("metadata"), name)
+    }
 
     if "Supervisor-Agent" not in index:
         yield StepEvent(type="error", text="Supervisor-Agent bulunamadi.")

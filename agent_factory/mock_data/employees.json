@@ -1,0 +1,72 @@
+{
+  "employees": [
+    {
+      "email": "admin@fnss.com.tr",
+      "name": "Sistem Yoneticisi",
+      "department": "IT",
+      "title": "Admin",
+      "roles": [
+        "admin"
+      ],
+      "leave_balance_days": 0,
+      "manager": null
+    },
+    {
+      "email": "ahmet.yilmaz@fnss.com.tr",
+      "name": "Ahmet Yilmaz",
+      "department": "HR",
+      "title": "IK Uzmani",
+      "roles": [
+        "hr"
+      ],
+      "leave_balance_days": 14,
+      "manager": "seda.kaya@fnss.com.tr"
+    },
+    {
+      "email": "seda.kaya@fnss.com.tr",
+      "name": "Seda Kaya",
+      "department": "Finance",
+      "title": "Finans Muduru",
+      "roles": [
+        "finance",
+        "manager"
+      ],
+      "leave_balance_days": 20,
+      "manager": null
+    },
+    {
+      "email": "mehmet.demir@fnss.com.tr",
+      "name": "Mehmet Demir",
+      "department": "Engineering",
+      "title": "Yazilim Muhendisi",
+      "roles": [
+        "engineering"
+      ],
+      "leave_balance_days": 9,
+      "manager": "seda.kaya@fnss.com.tr"
+    },
+    {
+      "email": "demo@fnss.com.tr",
+      "name": "Demo Kullanici",
+      "department": "General",
+      "title": "Calisan",
+      "roles": [
+        "employee"
+      ],
+      "leave_balance_days": 12,
+      "manager": null
+    },
+    {
+      "email": "oguzhan.saglam@fnss.com.tr",
+      "name": "Oğuzhan Sağlam",
+      "department": "Engineering",
+      "title": "Muhendislik Stajyeri",
+      "roles": [
+        "engineering"
+      ],
+      "leave_balance_days": 12,
+      "manager": null,
+      "extra_agents": []
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "spec_8ec8cede",
+  "version": 1,
+  "created_at": "2026-04-21T11:39:20.939361",
+  "name": "İşe Alım Süreci Yönetici",
+  "purpose": "İşe alım süreçlerine yönelik bilgileri toplar, analiz eder ve bu doğrultuda gerekli işlemleri başlatır. İş akışlarını iyileştirir ve adaylarla ilgili süreçleri hızlandırır.",
+  "user_audience": "İnsan kaynakları profesyonelleri ve işe alım uzmanları",
+  "data_sources": [
+    "İK veritabanı",
+    "Aday Bilgi Sistemi"
+  ],
+  "tools": [
+    {
+      "name": "db_query",
+      "type": "db_query",
+      "description": "db_query araci",
+      "config": {}
+    },
+    {
+      "name": "api_call",
+      "type": "api_call",
+      "description": "api_call araci",
+      "config": {}
+    }
+  ],
+  "risk_level": "medium",
+  "approval_required": true,
+  "contains_pii": true,
+  "needs_supervisor": false,
+  "custom_state_required": false,
+  "decision_points": 1,
+  "suggested_type": null
+}
