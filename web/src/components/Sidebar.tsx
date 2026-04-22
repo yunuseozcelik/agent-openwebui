@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Home, Plus, Bot, MessageSquare, LayoutTemplate, User as UserIcon, Shield, UserPlus } from "lucide-react";
+import { Home, Plus, Bot, MessageSquare, LayoutTemplate, User as UserIcon, Shield, UserPlus, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useStore } from "@/store";
@@ -12,6 +12,7 @@ const baseItems = [
   { to: "/agents", label: "Agent'lar", icon: Bot },
   { to: "/templates", label: "Şablonlar", icon: LayoutTemplate },
   { to: "/chat", label: "Sohbet", icon: MessageSquare },
+  { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
 ];
 
 export function Sidebar() {

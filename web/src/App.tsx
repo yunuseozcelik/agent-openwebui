@@ -9,6 +9,7 @@ import { Templates } from "@/pages/Templates";
 import { Chat } from "@/pages/Chat";
 import { AgentEdit } from "@/pages/AgentEdit";
 import { Admin } from "@/pages/Admin";
+import { Dashboard } from "@/pages/Dashboard";
 import { api } from "@/lib/api";
 import { useStore } from "@/store";
 
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/agents/:agentId/edit" element={<AgentEdit />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </main>
       <Toaster

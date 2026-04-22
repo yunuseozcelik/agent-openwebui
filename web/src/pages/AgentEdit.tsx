@@ -44,6 +44,7 @@ export function AgentEdit() {
       toast.success("Kaydedildi — Azure sync arka planda çalışıyor");
       const updated = await api.agents();
       setAgents(updated);
+      navigate("/agents");
     } catch (e) {
       toast.error("Kayıt başarısız: " + String(e));
     } finally {
