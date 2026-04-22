@@ -12,15 +12,21 @@ from agent_framework.openai import OpenAIChatClient
 from agent_factory.config import OPENAI_API_KEY, OPENAI_MODEL
 from agent_factory.mock_data.context_loader import get_mock_context
 from agent_factory.deployment.foundry_client import get_agent_detail, AgentInfo, FOUNDRY_PROJECT_ENDPOINT
+from agent_factory.tools.actions import build_action_tools
+from agent_factory.user_context import format_user_block, resolve_user
 from utils.portkey import get_maf_client_options
 
 
 class AgentRunner:
     """Bir deploy edilmis agent ile konusma oturumu."""
 
-    def __init__(self, agent_info: AgentInfo):
+    def __init__(self, agent_info: AgentInfo, user_email: str | None = None):
         self.agent_info = agent_info
         self._history: list[dict] = []
+        self.user = resolve_user(user_email)
+
+    def set_user(self, user_email: str | None) -> None:
+        self.user = resolve_user(user_email)
 
     async def send(self, user_message: str) -> str:
         """Mesaj gonder, cevap al."""
@@ -30,6 +36,14 @@ class AgentRunner:
 
         # Mock/local: LLM ile agent'in instructions'ini kullanarak cevap ver
         return await self._run_local(user_message)
+
+    def _is_action_agent(self) -> bool:
+        meta = self.agent_info.metadata or {}
+        if meta.get("agent_kind") == "action":
+            return True
+        # Seed agent isimleri: HR/IT/Finance aksiyona izin verir
+        name = (self.agent_info.name or "").lower()
+        return any(k in name for k in ("hr", "it-", "finance", "izin", "avans", "ticket", "talep"))
 
     async def _run_local(self, user_message: str) -> str:
         """Local LLM ile agent'in instructions'ini kullanarak cevap."""
@@ -77,10 +91,25 @@ class AgentRunner:
         if mock_context:
             instructions += f"\n\n{mock_context}"
 
+        instructions += "\n\n" + format_user_block(self.user)
+
+        tools = None
+        if self._is_action_agent():
+            tools = build_action_tools(self.user, self.agent_info.name)
+            instructions += (
+                "\n\n## AKSIYON ARACLARI\n"
+                "Asagidaki tool'lara erisimin var. Onay aldiktan sonra bunlardan uygun olani cagir.\n"
+                "- request_leave(start_date, end_date, reason)\n"
+                "- request_advance(amount_try, reason, repayment_months)\n"
+                "- create_ticket(title, description, priority)\n"
+                "Tool cagirdiktan sonra donen referans numarasini kullaniciya ilet."
+            )
+
         agent = Agent(
             client=client,
             name=self.agent_info.name,
             instructions=instructions,
+            tools=tools,
         )
 
         context = ""

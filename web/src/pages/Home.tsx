@@ -7,6 +7,7 @@ import { truncate } from "@/lib/utils";
 export function Home() {
   const agents = useStore((s) => s.agents);
   const templates = useStore((s) => s.templates);
+  const me = useStore((s) => s.me);
 
   return (
     <div className="max-w-3xl mx-auto px-6 md:px-10 py-14 md:py-20 space-y-16">
@@ -34,14 +35,22 @@ export function Home() {
       </header>
 
       <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-[15px] font-semibold">Agent'larınız</h2>
-          <span className="text-[13px] text-muted">{agents.length} toplam</span>
+        <div className="flex items-baseline justify-between mb-1">
+          <h2 className="text-[15px] font-semibold">Erişebildiğiniz agent'lar</h2>
+          <span className="text-[13px] text-muted">{agents.length} görünür</span>
         </div>
+        {me && (
+          <div className="mb-4 text-[11.5px] text-subtle">
+            <span className="inline-flex items-center rounded-full border border-border bg-white px-2 py-0.5 font-medium text-ink">
+              {me.roles.join(" · ")}
+            </span>{" "}
+            rolü · kapsam: {me.allowed_parents.join(", ")}
+          </div>
+        )}
         {agents.length === 0 ? (
           <Card className="p-8 text-center">
             <Bot className="h-6 w-6 text-subtle mx-auto mb-2" />
-            <div className="text-sm text-muted">Henüz agent yok</div>
+            <div className="text-sm text-muted">Bu rol için erişilebilir agent yok</div>
           </Card>
         ) : (
           <div className="space-y-1.5">

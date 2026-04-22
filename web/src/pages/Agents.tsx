@@ -12,10 +12,11 @@ const SEED_NAMES = new Set([
 
 export function Agents() {
   const agents = useStore((s) => s.agents);
+  const me = useStore((s) => s.me);
 
   return (
     <div className="max-w-3xl mx-auto px-6 md:px-10 py-14 md:py-20">
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex items-end justify-between mb-2">
         <h1 className="text-3xl font-semibold tracking-tight">Agent'lar</h1>
         <Link to="/build">
           <Button size="sm">
@@ -23,11 +24,19 @@ export function Agents() {
           </Button>
         </Link>
       </div>
+      {me && (
+        <div className="mb-6 text-[12px] text-subtle">
+          <span className="inline-flex items-center rounded-full border border-border bg-white px-2 py-0.5 font-medium text-ink">
+            {me.roles.join(" · ")}
+          </span>{" "}
+          · {agents.length} agent görünür (rolünüze göre filtrelendi)
+        </div>
+      )}
 
       {agents.length === 0 ? (
         <Card className="p-12 text-center">
           <Bot className="h-6 w-6 text-subtle mx-auto mb-3" />
-          <div className="text-sm text-muted mb-4">Henüz agent yok</div>
+          <div className="text-sm text-muted mb-4">Bu rol için erişilebilir agent yok</div>
           <Link to="/build">
             <Button size="sm">Oluştur</Button>
           </Link>

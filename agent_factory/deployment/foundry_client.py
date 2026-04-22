@@ -415,6 +415,7 @@ def list_agents() -> list[AgentInfo]:
                 meta["mock"] = data.get("mock", False)
             if not meta.get("parent_agent_name"):
                 meta["parent_agent_name"] = _infer_parent_name(name)
+            meta = _inherit_allowed_roles(meta)
             agents.append(AgentInfo(
                 id=agent_id,
                 name=name,
@@ -452,6 +453,7 @@ def list_agents() -> list[AgentInfo]:
             meta = dict(data.get("metadata", {}))
             if "mock" not in meta:
                 meta["mock"] = data.get("mock", False)
+            meta = _inherit_allowed_roles(meta)
             agents.append(AgentInfo(
                 id=agent_id,
                 name=data.get("name", "Unknown"),
@@ -473,13 +475,14 @@ def list_agents() -> list[AgentInfo]:
             # Zaten deploy edilmis mi kontrol et
             if any(a.name == agent_name for a in agents):
                 continue
+            draft_meta = _inherit_allowed_roles({**data.get("metadata", {}), "status": "draft"})
             agents.append(AgentInfo(
                 id=f"draft_{spec_id}",
                 name=agent_name,
                 model=data.get("model", ""),
                 instructions=data.get("instructions", ""),
                 tools=data.get("tools", []),
-                metadata={**data.get("metadata", {}), "status": "draft"},
+                metadata=draft_meta,
                 source="local",
             ))
         except Exception:
@@ -519,7 +522,7 @@ def get_agent_detail(agent_id: str) -> AgentInfo | None:
                     model=data.get("model", ""),
                     instructions=data.get("instructions", ""),
                     tools=data.get("tools", []),
-                    metadata=data.get("metadata", {}),
+                    metadata=_inherit_allowed_roles(dict(data.get("metadata", {}))),
                     source="local",
                 )
         except Exception:
@@ -1366,6 +1369,22 @@ def _seed_order() -> list[str]:
 
 def _seed_metadata_by_name() -> dict[str, dict]:
     return {seed["name"]: dict(seed.get("metadata", {})) for seed in SEED_AGENT_DEFINITIONS}
+
+
+def _inherit_allowed_roles(meta: dict) -> dict:
+    """Custom agent'ta allowed_roles yoksa parent'tan devral.
+    Parent bulunamazsa varsayilan olarak ['admin', 'manager'] — herkese acik degil."""
+    if meta.get("allowed_roles"):
+        return meta
+    parent = meta.get("parent_agent_name") or meta.get("parent_agent")
+    if parent:
+        parent_meta = _seed_metadata_by_name().get(parent)
+        if parent_meta and parent_meta.get("allowed_roles"):
+            meta["allowed_roles"] = list(parent_meta["allowed_roles"])
+            return meta
+    # Parent belirsiz / public -> admin-only fallback (gizlilik > gorunurluk)
+    meta["allowed_roles"] = ["admin"]
+    return meta
 
 
 def _workflow_action_id(agent_name: str, used: set[str]) -> str:

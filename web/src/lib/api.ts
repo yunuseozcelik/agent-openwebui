@@ -80,11 +80,16 @@ export interface DeployResult {
   workflow_update?: Record<string, unknown> | null;
 }
 
+import { getCurrentUserEmail } from "@/store";
+
 async function j<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
+  const email = getCurrentUserEmail();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (email) headers["X-User-Email"] = email;
+  const res = await fetch(path, { ...init, headers });
   if (!res.ok) throw new Error(`${res.status}: ${await res.text().catch(() => "")}`);
   return res.json();
 }
@@ -100,10 +105,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  deploy: (spec_id: string) =>
+  deploy: (
+    spec_id: string,
+    overrides?: { name?: string; purpose?: string; instructions?: string; parent_agent_name?: string }
+  ) =>
     j<DeployResult>("/api/builder/deploy", {
       method: "POST",
-      body: JSON.stringify({ spec_id }),
+      body: JSON.stringify({ spec_id, ...(overrides || {}) }),
     }),
   agents: () => j<Agent[]>("/api/agents"),
   updateAgent: (id: string, payload: { instructions?: string; name?: string; purpose?: string }) =>
@@ -114,6 +122,26 @@ export const api = {
   deleteAgent: (id: string) =>
     j<{ success: boolean }>(`/api/agents/${encodeURIComponent(id)}`, { method: "DELETE" }),
   templates: () => j<Template[]>("/api/templates"),
+  users: () => j<Array<{ email: string; name: string; department: string; title: string; roles: string[]; extra_agents?: string[] }>>("/api/users"),
+  me: () => j<{
+    email: string; name: string; department: string; title: string;
+    roles: string[]; extra_agents: string[]; allowed_parents: string[];
+  }>("/api/users/me"),
+  registerUser: (payload: { name: string; department: string; level: string }) =>
+    j<{ success: boolean; user: { email: string; name: string; department: string; title: string; roles: string[] } }>(
+      "/api/users/register",
+      { method: "POST", body: JSON.stringify(payload) }
+    ),
+  catalog: () =>
+    j<{
+      departments: Array<{ id: string; label: string; base_role: string }>;
+      levels: Array<{ id: string; label: string; suffix: string; is_manager: boolean }>;
+    }>("/api/users/catalog"),
+  grantAgents: (email: string, agents: string[]) =>
+    j<{ success: boolean; email: string; extra_agents: string[] }>(
+      `/api/users/${encodeURIComponent(email)}/agents`,
+      { method: "PATCH", body: JSON.stringify({ agents }) }
+    ),
   buildFromTemplate: (template_id: string) =>
     j<BuildResult>("/api/templates/build", {
       method: "POST",

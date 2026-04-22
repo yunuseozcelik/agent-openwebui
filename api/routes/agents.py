@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
+
+from agent_factory.user_context import can_see_agent, resolve_user
 
 from agent_factory.deployment.foundry_client import (
     AgentInfo,
@@ -60,35 +62,46 @@ def _to_summary(a: AgentInfo) -> AgentSummary:
 
 
 @router.get("", response_model=list[AgentSummary])
-async def get_agents():
-    return [_to_summary(a) for a in list_agents()]
+async def get_agents(x_user_email: str | None = Header(default=None)):
+    user = resolve_user(x_user_email)
+    return [_to_summary(a) for a in list_agents() if can_see_agent(user, a.metadata, a.name)]
 
 
 @router.get("/{agent_id}", response_model=AgentSummary)
-async def get_agent(agent_id: str):
+async def get_agent(agent_id: str, x_user_email: str | None = Header(default=None)):
     a = get_agent_detail(agent_id)
     if not a:
         raise HTTPException(status_code=404, detail="Agent bulunamadi")
+    user = resolve_user(x_user_email)
+    if not can_see_agent(user, a.metadata, a.name):
+        raise HTTPException(status_code=403, detail="Bu agent'a erisim yetkiniz yok")
     return _to_summary(a)
 
 
-def _get_or_create_runner(session_id: str, agent_id: str) -> AgentRunner:
+def _get_or_create_runner(session_id: str, agent_id: str, user_email: str | None = None) -> AgentRunner:
     session = session_store.get(session_id)
-    if agent_id in session.runners:
-        return session.runners[agent_id]
 
     info = get_agent_detail(agent_id)
     if not info:
         raise HTTPException(status_code=404, detail="Agent bulunamadi")
 
-    runner = AgentRunner(info)
+    user = resolve_user(user_email)
+    if not can_see_agent(user, info.metadata, info.name):
+        raise HTTPException(status_code=403, detail="Bu agent'i kullanma yetkiniz yok")
+
+    if agent_id in session.runners:
+        runner = session.runners[agent_id]
+        runner.set_user(user_email)
+        return runner
+
+    runner = AgentRunner(info, user_email=user_email)
     session.runners[agent_id] = runner
     return runner
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    runner = _get_or_create_runner(req.session_id, req.agent_id)
+async def chat(req: ChatRequest, x_user_email: str | None = Header(default=None)):
+    runner = _get_or_create_runner(req.session_id, req.agent_id, req.user_email or x_user_email)
     try:
         text = await runner.send(req.message)
         return ChatResponse(content=text)
@@ -97,9 +110,9 @@ async def chat(req: ChatRequest):
 
 
 @router.post("/chat/stream")
-async def chat_stream(req: ChatRequest):
+async def chat_stream(req: ChatRequest, x_user_email: str | None = Header(default=None)):
     """SSE chunk-based stream (simulasyon — gercek token streami icin runner guncellenir)."""
-    runner = _get_or_create_runner(req.session_id, req.agent_id)
+    runner = _get_or_create_runner(req.session_id, req.agent_id, req.user_email or x_user_email)
 
     async def generator():
         yield sse_event("start", {})
@@ -126,7 +139,8 @@ async def chat_stream(req: ChatRequest):
 
 
 @router.post("/chat/orchestrate")
-async def chat_orchestrate(req: ChatRequest):
+async def chat_orchestrate(req: ChatRequest, x_user_email: str | None = Header(default=None)):
+    user_email = req.user_email or x_user_email
     """Supervisor → Alt Agent'lar → Synthesis akisini SSE olarak yayinlar."""
 
     _SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
@@ -134,7 +148,7 @@ async def chat_orchestrate(req: ChatRequest):
     async def generator():
         yield sse_event("start", {})
         try:
-            async for step in orchestrate(req.message):
+            async for step in orchestrate(req.message, user_email=user_email):
                 if step.type == "routing":
                     yield sse_event("routing", {
                         "agent": step.agent,

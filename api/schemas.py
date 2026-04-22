@@ -58,6 +58,10 @@ class BuildResponse(BaseModel):
 
 class DeployRequest(BaseModel):
     spec_id: str
+    name: str | None = None
+    purpose: str | None = None
+    instructions: str | None = None
+    parent_agent_name: str | None = None
 
 
 class DeployResponse(BaseModel):
@@ -82,6 +86,7 @@ class ChatRequest(BaseModel):
     agent_id: str
     session_id: str
     message: str
+    user_email: str | None = None
 
 
 class ChatResponse(BaseModel):

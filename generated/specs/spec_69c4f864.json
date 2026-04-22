@@ -1,0 +1,17 @@
+{
+  "id": "spec_69c4f864",
+  "version": 1,
+  "created_at": "2026-04-22T05:35:19.577599",
+  "name": "HR-Tries-Finance",
+  "purpose": "test",
+  "user_audience": "test",
+  "data_sources": [],
+  "tools": [],
+  "risk_level": "low",
+  "approval_required": false,
+  "contains_pii": false,
+  "needs_supervisor": false,
+  "custom_state_required": false,
+  "decision_points": 0,
+  "suggested_type": null
+}

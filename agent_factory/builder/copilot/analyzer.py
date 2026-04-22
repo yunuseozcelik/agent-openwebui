@@ -129,16 +129,29 @@ def _fallback_spec_data(
 PARSE_PROMPT = """Kullanicinin asagidaki agent tarifini derinlemesine analiz et.
 Cevabi SADECE JSON olarak don, baska bir sey yazma.
 
-ONEMLI FELSEFE: Olusturulan tum agentlar SISTEMDEN HAZIR VERI CEKEN PRESENTER'lardir.
-Agent kendi basina icerik URETMEZ, PLANLAMAZ, OZELLESTIRMEZ. Sadece sistemdeki hazir
-veriyi (ornek: haftalik yemek menusu, izin bakiyesi, satis raporu) kullaniciya
-iletir. "Olusturur", "planlar", "oneri sunar", "ozellestirilmis" gibi ifadeler
-KULLANMA. Bunun yerine "sistemden getirir", "gosterir", "iletir", "raporlar" kullan.
+BAGLAM: Olusturulan tum agentlar FNSS kurumsal agent ekosisteminin parcasi olacak.
+Yani agent kim oldugunu bilir: FNSS calisanlarina hizmet veren bir sirket agenti.
+Giris yapmis kullanicinin bilgilerini (email, departman, unvan) oturum
+baglaminda alabilir. Sirket politikalari ve default degerler sistem tarafindan
+saglanir.
+
+Agent iki kategoriye girebilir:
+- "presenter": Sistemdeki hazir veriyi kullaniciya iletir (yemek menusu,
+  izin bakiyesi, satis raporu gibi).
+- "action": Sistem uzerinden islem gerceklestirir (izin talebi, avans
+  talebi, ticket acma, onay baslatma). Aksiyon oncesi kisa ozet gecip onay
+  alir, ardindan talebi olusturup referans no doner.
+
+ONEMLI KURAL: Agent kullaniciya gereksiz soru SORMAZ. Sirket bilgisini veya
+default'u zaten bilir. Sadece aksiyon icin gereken kritik parametreyi ister
+(ornek: izin tarihleri, avans tutari). "Besin tercihi, alerji, amacin ne"
+gibi ozellestirme sorulari SORMAZ.
 
 JSON formati:
 {{
   "name": "Kisa ve aciklayici agent ismi (Turkce, 2-4 kelime)",
-  "purpose": "Agent sistemdeki hangi veriyi kullaniciya sunacak, 1-2 cumle (Turkce). 'Planlar/olusturur' DEGIL 'sistemdeki X verisini getirir/gosterir'",
+  "purpose": "Agent ne yapacak, 1-2 cumle (Turkce). 'Sistemden X verisini getirir ve sunar' veya 'X talebini olusturur ve takip eder' seklinde, aksiyona odakli yaz.",
+  "agent_kind": "presenter|action",
   "inferred_tools": ["tool_tipi1", "tool_tipi2"],
   "inferred_data_sources": ["kaynak1", "kaynak2"],
   "suggested_capabilities": ["yetenek1", "yetenek2", "yetenek3"],
@@ -225,16 +238,25 @@ Risk seviyesi belirleme:
 INSTRUCTION_PROMPT = """Asagidaki agent spec bilgilerine gore system prompt olustur.
 
 ╔══════════════════════════════════════════════════════════════════════╗
-║  KRITIK FELSEFE — HER SEYIN ONUNDE                                   ║
+║  BAGLAM — FNSS KURUMSAL AGENT                                        ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║  Bu agent bir PRESENTER / DATA DELIVERY agent'idir.                  ║
-║  - Sistem ona runtime'da hazir mock/gercek veri enjekte eder.        ║
-║  - Agent'in TEK gorevi: bu veriyi kullaniciya iletmek.               ║
-║  - Agent KENDISI icerik URETMEZ, PLANLAMAZ, OZELLESTIRMEZ,           ║
-║    HESAPLAMAZ, ONERI SUNMAZ.                                         ║
-║  - Kullanicidan "tercih, alerji, besin kisitlamasi, amacin ne" gibi  ║
-║    seyler SORMAZ. Sistem verisi neyse onu gosterir.                  ║
-║  - Veri gelmediyse "Bu konuda veri bulamadim" der, uydurmaz.         ║
+║  Bu agent FNSS sirket icinde calisan kurumsal bir asistandir.        ║
+║  - Kullanicinin kim oldugunu (email, departman, unvan) oturum        ║
+║    baglaminda bilir. Sirket politikalarini ve default degerleri      ║
+║    sistem saglar.                                                    ║
+║  - Agent GEREKSIZ soru SORMAZ: besin tercihi, alerji, amacin ne,     ║
+║    hangi sirket, kullanici kim gibi seyleri sormaz. Bunlari bilir    ║
+║    veya sistemden alir.                                              ║
+║  - Iki tip agent vardir:                                             ║
+║    (A) PRESENTER: Sistemdeki veriyi getirip sunar (yemek menusu,     ║
+║        izin bakiyesi, satis raporu). Kendi veri uretmez, uydurmaz.   ║
+║    (B) ACTION: Sistem uzerinden islem yapar (izin talebi, avans,     ║
+║        ticket acma). Sadece AKSIYON icin gereken KRITIK parametreyi  ║
+║        ister (ornek: izin tarihleri, avans tutari, sebep).           ║
+║        Kullanicidan aldigi parametreleri kisa bir ozet halinde       ║
+║        gosterir, onay alir, ardindan islemi baslatir ve referans     ║
+║        numarasini doner.                                             ║
+║  - Veri yoksa / islem basarisizsa uydurmaz, acikca soyler.           ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
 ## Agent Bilgileri
@@ -246,24 +268,35 @@ INSTRUCTION_PROMPT = """Asagidaki agent spec bilgilerine gore system prompt olus
 - Tool'lar: {tools}
 - Veri Kaynaklari: {data_sources}
 
-## System prompt bolumleri (kisa tut, her biri 1-3 cumle)
+Amaca bak: agent "getirir/listeler/gosterir" ise PRESENTER, "olusturur/
+talep eder/acar/baslatir" ise ACTION tipidir. Ikisini karisik gerektiren
+durumda ikisini de destekle (once veri goster, sonra kullanici isterse
+aksiyon).
 
-1. KIMLIK: "Ben {name}. Gorevim sistemdeki [X] verisini kullaniciya sunmak."
-2. GOREV: Sistemden ne veriyi nasil gosterecegi. "Planlar/ozellestirir"
-   DEGIL "sistemden getirir ve sunar".
-3. CALISMA PRENSIBI (zorunlu, aynen yaz):
-   "Runtime'da sana 'MEVCUT VERI' basligi altinda sistem verisi verilir.
-   SADECE bu veriyi kullan. Kendinden icerik uretme, planlama, ozellestirme.
-   Kullanicidan tercih/alerji/amac sorma. Veri yoksa 'veri bulunamadi' de."
-4. CIKTI FORMATI: Veriyi nasil bicimlendirecegi (tablo/liste).
-5. KAPSAM DISI: Kapsam disi sorularda kisaca reddet.
+## System prompt bolumleri (kisa tut)
+
+1. KIMLIK: "Ben {name}, FNSS icindeki [X] asistaniyim. Kullanicinin
+   departmani ve kimliği sistemden gelir." (1-2 cumle)
+2. GOREV: Ne yaptigini somut yaz. Presenter ise "sistemden [X] verisini
+   getirir ve sunar"; action ise "[X] talebini olusturur, onay alir,
+   referans numarasi doner".
+3. CALISMA PRENSIBI:
+   - Presenter icin: "Runtime'da sana 'MEVCUT VERI' enjekte edilir.
+     Sadece bu veriyi kullan, kendinden uretme, uydurma."
+   - Action icin: "Kullanicidan sadece islemin gerektirdigi kritik
+     parametreleri iste (ornek parametreleri yaz). Topladiktan sonra
+     ozet goster, 'Onayliyor musunuz?' diye sor, onay sonrasi islemi
+     baslat ve referans numarasi don."
+   - Her iki durumda: sirketi, kullaniciyi, default'u sorma — bilirsin.
+4. CIKTI FORMATI: Tablo/liste/ozet — gorevin tipine gore.
+5. KAPSAM DISI: Gorev disi talepleri kibarca reddet.
 
 KURALLAR:
-- Prompt Turkce, 200-350 kelime arasinda, KISA ve AKSIYON ODAKLI.
-- "Ozellestirilmis", "kisiye ozel", "tercihlere gore", "planlama",
-  "oneri sunma", "olusturma" kelimelerini KULLANMA.
-- "Sistemdeki veriyi", "hazir veriden", "iletir", "raporlar", "gosterir"
-  kelimelerini kullan.
+- Prompt Turkce, 200-400 kelime.
+- "Besin tercihiniz, alerjiniz, amaciniz, hangi sirket" gibi ozellestirme
+  sorularini YASAKLA.
+- Action agentlari icin "ozet goster + onay al + referans no don"
+  akisini acikca yaz.
 - Sadece prompt metnini don, baska aciklama ekleme.
 """
 

@@ -1,0 +1,39 @@
+{
+  "id": "spec_1469c8bb",
+  "version": 1,
+  "created_at": "2026-04-22T05:55:48.531150",
+  "name": "Excel Dosyası Hazırlayıcı",
+  "purpose": "Sistemden gerekli verileri alarak kullanıcının ihtiyaçlarına uygun Excel dosyası oluşturur ve sunar. Kullanıcının iş süreçlerini kolaylaştıracak şekilde, uygun formatta raporlar üretir.",
+  "user_audience": "tum_sirket",
+  "data_sources": [
+    "veritabanı",
+    "kullanıcı girdileri"
+  ],
+  "tools": [
+    {
+      "name": "code_interpreter",
+      "type": "code_interpreter",
+      "description": "code_interpreter araci",
+      "config": {}
+    },
+    {
+      "name": "file_reader",
+      "type": "file_reader",
+      "description": "file_reader araci",
+      "config": {}
+    },
+    {
+      "name": "db_query",
+      "type": "db_query",
+      "description": "db_query araci",
+      "config": {}
+    }
+  ],
+  "risk_level": "medium",
+  "approval_required": false,
+  "contains_pii": true,
+  "needs_supervisor": false,
+  "custom_state_required": false,
+  "decision_points": 0,
+  "suggested_type": null
+}
