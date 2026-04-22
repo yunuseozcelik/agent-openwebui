@@ -71,7 +71,7 @@ export function Builder() {
       audience: answers.audience ?? "tum_sirket",
       tone: answers.tone ?? "friendly",
       output_format: answers.output_format ?? "adaptive",
-      scope: "no_restriction",
+      scope: answers.scope ?? "strict_scope",
       pii: answers.pii ?? "maybe",
       approval: answers.approval ?? "conditional",
       example_scenario: "skip",
@@ -89,6 +89,12 @@ export function Builder() {
       const desired = inferredParent || "Supervisor-Agent";
       setEditParent(PARENT_OPTIONS.includes(desired) ? desired : PARENT_OPTIONS[0]);
       setPhase("done");
+      // Backend'den gelen uyarıları göster
+      if ((r as any).warnings?.length) {
+        for (const w of (r as any).warnings) {
+          toast.warning(w);
+        }
+      }
     } catch (e) {
       toast.error("Oluşturma başarısız: " + String(e));
       setPhase("wizard");
@@ -110,10 +116,17 @@ export function Builder() {
       });
       setDeployStatus("Deploy cevabi alindi.");
       if (r.success) {
-        toast.success("Agent hazır");
+        if (r.mock) {
+          toast.success("Agent oluşturuldu (mock — Foundry bağlantısı kurulamadı)");
+        } else {
+          toast.success("Agent başarıyla Azure'a deploy edildi");
+        }
+        if (r.application_update_error) {
+          toast.warning("Application güncelleme uyarısı: " + r.application_update_error);
+        }
         navigate(`/chat?agent=${encodeURIComponent(r.foundry_agent_id || "")}`);
       } else {
-        toast.error(r.error || "Başarısız");
+        toast.error("Deploy başarısız: " + (r.error || "Bilinmeyen hata"));
       }
     } catch (e) {
       toast.error(String(e));

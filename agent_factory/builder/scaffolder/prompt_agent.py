@@ -21,6 +21,7 @@ def scaffold_prompt_agent(
     instructions = custom_instructions or generate_instructions(spec, wizard_answers)
     model = FOUNDRY_AGENT_MODEL or AZURE_OPENAI_DEPLOYMENT or OPENAI_WORKER_MODEL
 
+    answers = wizard_answers or {}
     definition = {
         "spec_id": spec.id,
         "name": spec.name,
@@ -31,6 +32,10 @@ def scaffold_prompt_agent(
             "generated_by": "agent-factory",
             "spec_version": str(spec.version),
             "risk_level": spec.risk_level.value,
+            "audience": answers.get("audience", ""),
+            "tone": answers.get("tone", ""),
+            "output_format": answers.get("output_format", ""),
+            "scope": answers.get("scope", ""),
         },
     }
 

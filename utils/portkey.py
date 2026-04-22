@@ -79,7 +79,7 @@ def get_maf_client_options(
     component: str,
 ) -> dict[str, Any]:
     options: dict[str, Any] = {
-        "model_id": resolve_model_name(model_id),
+        "model": resolve_model_name(model_id),
         "api_key": get_client_api_key(primary_api_key),
     }
     if is_gateway_enabled():

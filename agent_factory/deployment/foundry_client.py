@@ -164,6 +164,8 @@ def _get_cli_access_token(scope: str) -> dict:
     config_dir = env.get("AZURE_CONFIG_DIR")
     if config_dir and not os.path.isabs(config_dir):
         env["AZURE_CONFIG_DIR"] = str(Path(config_dir).resolve())
+    elif not config_dir:
+        env.pop("AZURE_CONFIG_DIR", None)
 
     completed = subprocess.run(
         [
@@ -248,13 +250,27 @@ def _get_foundry_client():
         return None
     try:
         from azure.ai.projects import AIProjectClient
+    except ImportError:
+        return None
+
+    # 1) Local'de AzureCliPathCredential dene (az.cmd ile)
+    try:
         return AIProjectClient(
             endpoint=config.project_endpoint,
             credential=AzureCliPathCredential(),
             allow_preview=True,
         )
-    except ImportError:
-        return None
+    except Exception:
+        pass
+
+    # 2) Azure'da DefaultAzureCredential dene (Managed Identity)
+    try:
+        from azure.identity import DefaultAzureCredential
+        return AIProjectClient(
+            endpoint=config.project_endpoint,
+            credential=DefaultAzureCredential(),
+            allow_preview=True,
+        )
     except Exception:
         return None
 
@@ -509,7 +525,7 @@ def get_agent_detail(agent_id: str) -> AgentInfo | None:
 # ---------------------------------------------------------------------------
 
 def update_agent_local(agent_id: str, updates: dict) -> AgentInfo | None:
-    """Update instructions/name in local JSON files. Returns updated AgentInfo or None."""
+    """Update instructions/name in local JSON files AND sync to Foundry."""
     for path in AGENT_DIR.glob("*.json"):
         try:
             data = _read_json_file(path)
@@ -531,6 +547,39 @@ def update_agent_local(agent_id: str, updates: dict) -> AgentInfo | None:
                 path.write_text(
                     json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
+
+                # Foundry'ye de sync et (arka planda)
+                agent_name = data.get("name", "")
+                import threading
+
+                def _sync_update_to_foundry(name, d):
+                    try:
+                        client = _get_foundry_client()
+                        if not client:
+                            print(f"[update_agent] Foundry client yok, sadece local guncellendi")
+                            return
+                        from azure.ai.projects.models import PromptAgentDefinition
+
+                        prompt_definition = PromptAgentDefinition(
+                            model=d.get("model", ""),
+                            instructions=d.get("instructions", ""),
+                        )
+                        client.agents.create_version(
+                            agent_name=name,
+                            definition=prompt_definition,
+                            metadata=_metadata_as_strings(d.get("metadata", {})),
+                            description=(d.get("purpose") or d.get("instructions", ""))[:512],
+                        )
+                        print(f"[update_agent] Foundry'de guncellendi: {name}")
+                    except Exception as exc:
+                        print(f"[update_agent] Foundry sync hatasi: {exc}")
+
+                threading.Thread(
+                    target=_sync_update_to_foundry,
+                    args=(agent_name, dict(data)),
+                    daemon=True,
+                ).start()
+
                 return AgentInfo(
                     id=agent_id,
                     name=data.get("name", ""),
@@ -549,12 +598,16 @@ def remove_agent_from_application(agent_name: str) -> bool:
     """Remove an agent reference from the Foundry Application + Deployment. Returns True on success."""
     removed_anywhere = False
 
+    # Normalize edilmis ismi de dene (Foundry'de normalize hali kullanılıyor)
+    normalized_name = _normalize_foundry_agent_name(agent_name)
+    names_to_match = {agent_name, normalized_name}
+
     # 1. Remove from Application
     try:
         application = get_agent_application()
         properties = _writable_application_properties(dict(application.get("properties", {})))
         agents = list(properties.get("agents", []))
-        filtered = [a for a in agents if a.get("agentName") != agent_name]
+        filtered = [a for a in agents if a.get("agentName") not in names_to_match]
         if len(filtered) != len(agents):
             properties["agents"] = filtered
             properties.setdefault("displayName", FOUNDRY_APPLICATION_NAME or "Agent Factory")
@@ -570,7 +623,7 @@ def remove_agent_from_application(agent_name: str) -> bool:
         deployment = get_agent_deployment()
         dep_props = _writable_deployment_properties(dict(deployment.get("properties", {})))
         dep_agents = list(dep_props.get("agents", []))
-        filtered = [a for a in dep_agents if a.get("agentName") != agent_name]
+        filtered = [a for a in dep_agents if a.get("agentName") not in names_to_match]
         if len(filtered) != len(dep_agents):
             dep_props["agents"] = filtered
             dep_props["deploymentType"] = dep_props.get("deploymentType") or FOUNDRY_AGENT_DEPLOYMENT_TYPE or "Managed"
@@ -585,18 +638,20 @@ def remove_agent_from_application(agent_name: str) -> bool:
     try:
         client = _get_foundry_client()
         if client:
-            try:
-                versions = list(client.agents.list_versions(agent_name))
-                for v in versions:
-                    try:
-                        version = _agent_attr(v, "version", None) or _agent_attr(v, "agent_version", None)
-                        if version:
-                            client.agents.delete_version(agent_name, str(version))
-                            removed_anywhere = True
-                    except Exception as exc:
-                        print(f"[delete_agent] delete_version failed for {agent_name}: {exc}")
-            except Exception as exc:
-                print(f"[delete_agent] list_versions failed for {agent_name}: {exc}")
+            # Hem orijinal hem normalize isimle dene
+            for try_name in names_to_match:
+                try:
+                    versions = list(client.agents.list_versions(try_name))
+                    for v in versions:
+                        try:
+                            version = _agent_attr(v, "version", None) or _agent_attr(v, "agent_version", None)
+                            if version:
+                                client.agents.delete_version(try_name, str(version))
+                                removed_anywhere = True
+                        except Exception as exc:
+                            print(f"[delete_agent] delete_version failed for {try_name}: {exc}")
+                except Exception as exc:
+                    print(f"[delete_agent] list_versions failed for {try_name}: {exc}")
     except Exception as exc:
         print(f"[delete_agent] project client error: {exc}")
 
@@ -630,8 +685,9 @@ def delete_agent(agent_id: str) -> bool:
     if agent_name is None:
         agent_name = agent_id
 
-    # 1. Delete local files
+    # 1. Delete local files (agents + specs)
     local_deleted = False
+    spec_ids_to_delete: set[str] = set()
     for path in list(AGENT_DIR.glob("*.json")):
         try:
             data = _read_json_file(path)
@@ -643,10 +699,23 @@ def delete_agent(agent_id: str) -> bool:
                 or data.get("name") == agent_id
                 or data.get("name") == agent_name
             ):
+                if spec_id:
+                    spec_ids_to_delete.add(spec_id)
                 path.unlink()
                 local_deleted = True
         except Exception:
             continue
+
+    # Spec dosyalarını da sil
+    spec_dir = AGENT_DIR.parent / "specs"
+    for sid in spec_ids_to_delete:
+        spec_path = spec_dir / f"{sid}.json"
+        try:
+            if spec_path.exists():
+                spec_path.unlink()
+                print(f"[delete_agent] spec silindi: {spec_path.name}")
+        except Exception as exc:
+            print(f"[delete_agent] spec silinemedi: {exc}")
 
     # 2. Remove from Foundry Application (best-effort)
     foundry_removed = remove_agent_from_application(agent_name)

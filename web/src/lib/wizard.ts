@@ -62,4 +62,15 @@ export const WIZARD_STEPS: WizardStep[] = [
       { label: "Bazen", value: "conditional" },
     ],
   },
+  {
+    id: "scope",
+    title: "Kapsam kısıtlaması",
+    choices: [
+      { label: "Finansal tavsiye vermesin", value: "no_financial_advice" },
+      { label: "Kişisel veri paylaşmasın", value: "no_pii_sharing" },
+      { label: "Sadece raporlasın, değişiklik yapmasın", value: "report_only" },
+      { label: "Görev dışına çıkmasın", value: "strict_scope" },
+      { label: "Kısıtlama yok", value: "no_restriction" },
+    ],
+  },
 ];

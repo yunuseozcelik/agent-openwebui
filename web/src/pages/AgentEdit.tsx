@@ -41,7 +41,7 @@ export function AgentEdit() {
     setSaving(true);
     try {
       await api.updateAgent(agentId, { instructions });
-      toast.success("Kaydedildi");
+      toast.success("Kaydedildi — Azure sync arka planda çalışıyor");
       const updated = await api.agents();
       setAgents(updated);
     } catch (e) {
@@ -56,7 +56,7 @@ export function AgentEdit() {
     setDeleting(true);
     try {
       await api.deleteAgent(agentId);
-      toast.success("Agent silindi");
+      toast.success("Agent silindi (local + Azure)");
       const updated = await api.agents();
       setAgents(updated);
       navigate("/agents");

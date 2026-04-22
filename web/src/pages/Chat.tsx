@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUp, Bot, Plus, Square, User } from "lucide-react";
+import { toast } from "sonner";
 import { Button, Card, Textarea } from "@/components/ui";
 import { useStore } from "@/store";
 import { streamChat, streamOrchestrate, OrchestrationStep } from "@/lib/api";
@@ -64,9 +65,10 @@ export function Chat() {
       updateLast((m) => { m.content = full || m.content; m.streaming = false; });
       setBusy(false);
     };
-    const onError = () => {
+    const onError = (err?: string) => {
       setBusy(false);
       setMsgs((m) => m.map((x) => ({ ...x, streaming: false })));
+      toast.error(err || "Bağlantı hatası — tekrar deneyin");
     };
 
     if (isOrchestrator) {

@@ -1,12 +1,12 @@
 {
-  "id": "spec_a163e415",
+  "id": "spec_d706cac5",
   "version": 1,
-  "created_at": "2026-04-20T08:16:26.048459",
-  "name": "Haftalýk Yemek Menüsü Yazýcý",
-  "purpose": "Güncel ve gelecek haftanýn yemek menüsünü bir Excel dosyasýna yazarak, kullanýcýnýn yemek planlamasýný kolaylaþtýrýr. Kullanýcýlara haftalýk yemek menüsü planlamasýnda rehberlik eder.",
-  "user_audience": "tum_sirket",
+  "created_at": "2026-04-21T08:48:30.379449",
+  "name": "Excel Ã–zeti Sunucu",
+  "purpose": "Sistemdeki Excel dosyalarÄ±nÄ± analiz ederek Ã¶nemli bilgileri Ã¶zetler ve kullanÄ±cÄ±lara sunar.",
+  "user_audience": "TÃ¼m ÅŸirket genelindeki kullanÄ±cÄ±lara yÃ¶nelik.",
   "data_sources": [
-    "excel"
+    "excel_dosyasi"
   ],
   "tools": [
     {
@@ -22,7 +22,7 @@
       "config": {}
     }
   ],
-  "risk_level": "medium",
+  "risk_level": "low",
   "approval_required": false,
   "contains_pii": false,
   "needs_supervisor": false,

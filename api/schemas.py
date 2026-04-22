@@ -51,6 +51,7 @@ class BuildResponse(BaseModel):
     ready_for_approval: bool
     integrations: list[str] = []
     graph: dict | None = None
+    warnings: list[str] = []
 
 
 # ── Deploy ──
